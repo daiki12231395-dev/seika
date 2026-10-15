@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-LINK - クラス・班の設定</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#faf8ff] flex flex-col items-center p-4 font-sans text-slate-800">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="w-full max-w-2xl py-6 px-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-[#0d9488] flex items-center justify-center text-white font-bold shadow-md">Q</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-xl tracking-tight text-slate-900">Q-LINK</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 font-medium">探究アプリ</span>
+        </div>
+        <p class="text-[11px] text-slate-400 font-medium">Field Adventure &amp; Quest Platform</p>
+      </div>
+    </div>
+    <a href="index.html" class="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-1.5 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition active:scale-[0.97] select-none">
+      <i data-lucide="arrow-left" style="width:14px;height:14px;color:#64748b"></i>
+      <span>戻る</span>
+    </a>
+
+  </header>
+
+  <!-- ===== メイン ===== -->
+  <main class="w-full max-w-2xl pb-16 space-y-5">
+
+    <!-- タイトル -->
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 px-8 py-6 flex items-center gap-3">
+      <i data-lucide="settings-2" style="width:24px;height:24px;color:#0d9488;flex-shrink:0"></i>
+      <div>
+        <h1 class="font-extrabold text-lg text-slate-900">クラス・班の初期設定</h1>
+        <p class="text-xs text-slate-400 mt-0.5">学年・クラス・班の情報を登録してください</p>
+      </div>
+    </div>
+
+    <!-- ===== 担当教員名 ===== -->
+    <section class="bg-white rounded-3xl shadow-xl border border-slate-100 px-8 py-6">
+      <h2 class="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="user" style="width:16px;height:16px;color:#0d9488"></i>
+        担当教員名
+      </h2>
+      <input type="text" id="teacher-name" placeholder="例: 近藤先生, 山田先生, 佐藤先生（カンマや読点で区切って複数登録可）" required
+       class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+
+    </section>
+
+    <!-- ===== 学年設定 ===== -->
+    <section class="bg-white rounded-3xl shadow-xl border border-slate-100 px-8 py-6">
+      <h2 class="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="graduation-cap" style="width:16px;height:16px;color:#0d9488"></i>
+        学年
+      </h2>
+      <div class="flex gap-3">
+        <label id="grade-1" onclick="selectGrade('1年')"
+          class="grade-btn flex-1 cursor-pointer border-2 rounded-xl py-3 text-center text-sm font-bold transition-all border-slate-200 text-slate-500 hover:border-[#0d9488]/50">
+          1年
+        </label>
+        <label id="grade-2" onclick="selectGrade('2年')"
+          class="grade-btn flex-1 cursor-pointer border-2 rounded-xl py-3 text-center text-sm font-bold transition-all border-[#0d9488] bg-teal-50 text-[#0d9488]">
+          2年
+        </label>
+        <label id="grade-3" onclick="selectGrade('3年')"
+          class="grade-btn flex-1 cursor-pointer border-2 rounded-xl py-3 text-center text-sm font-bold transition-all border-slate-200 text-slate-500 hover:border-[#0d9488]/50">
+          3年
+        </label>
+      </div>
+    </section>
+
+    <!-- ===== クラス設定 ===== -->
+    <section class="bg-white rounded-3xl shadow-xl border border-slate-100 px-8 py-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+          <i data-lucide="layout-list" style="width:16px;height:16px;color:#0d9488"></i>
+          クラス一覧
+        </h2>
+        <button type="button" onclick="addClass()"
+          class="flex items-center gap-1.5 text-xs font-bold text-[#0d9488] border border-[#0d9488] rounded-lg px-3 py-1.5 hover:bg-teal-50 transition">
+          <i data-lucide="plus" style="width:13px;height:13px"></i>
+          クラスを追加
+        </button>
+      </div>
+      <ul id="class-list" class="space-y-2"></ul>
+    </section>
+
+    <!-- ===== 生徒用パスワード設定 ===== -->
+    <section class="bg-white rounded-3xl shadow-xl border border-slate-100 px-8 py-6">
+      <h2 class="font-bold text-sm text-slate-900 mb-1 flex items-center gap-2">
+        <i data-lucide="key-round" style="width:16px;height:16px;color:#0d9488"></i>
+        生徒用ログインパスワード
+      </h2>
+      <p class="text-xs text-slate-400 mb-4">生徒がアプリにログインする際に共通で使用するパスワードを設定してください。</p>
+      
+      <div>
+        <div class="relative">
+          <input type="password" id="student-password" placeholder="例: 1234 や qlink2026" required
+            class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+          <button type="button" id="eye-btn" onclick="togglePassword()"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="eye-off" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+        <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+          <input type="checkbox" id="show-pw-check" onchange="togglePasswordFromCheck(this)"
+            class="w-4 h-4 rounded border-slate-300" style="accent-color:#0d9488" />
+          <span class="text-xs text-slate-600">パスワードを表示する</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ===== 保存ボタン ===== -->
+    <div class="px-1">
+      <button type="button" onclick="saveSettings(event)"
+        class="w-full py-3.5 px-4 bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.99]">
+        <i data-lucide="save" style="width:18px;height:18px"></i>
+        <span>設定を保存してログイン画面へ</span>
+      </button>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    // ========== 状態 ==========
+    let showPw = false;
+    let selectedGrade = '2年';
+    let classes = [
+      { name: '1組', groupCount: 5 },
+      { name: '2組', groupCount: 5 },
+      { name: '3組', groupCount: 5 },
+      { name: '4組', groupCount: 5 },
+    ];
+
+    // ========== パスワード表示切り替え ==========
+    function togglePassword() {
+      showPw = !showPw;
+      applyPasswordVisibility();
+    }
+
+    function togglePasswordFromCheck(checkbox) {
+      showPw = checkbox.checked;
+      applyPasswordVisibility();
+    }
+
+    function applyPasswordVisibility() {
+      document.getElementById('student-password').type = showPw ? 'text' : 'password';
+      document.getElementById('show-pw-check').checked = showPw;
+
+      const eyeBtn = document.getElementById('eye-btn');
+      eyeBtn.innerHTML = `<i data-lucide="${showPw ? 'eye' : 'eye-off'}" style="width:16px;height:16px"></i>`;
+      lucide.createIcons();
+    }
+
+    // ========== 学年選択 ==========
+    function selectGrade(grade) {
+      selectedGrade = grade;
+      const ACTIVE   = 'grade-btn flex-1 cursor-pointer border-2 rounded-xl py-3 text-center text-sm font-bold transition-all border-[#0d9488] bg-teal-50 text-[#0d9488]';
+      const INACTIVE = 'grade-btn flex-1 cursor-pointer border-2 rounded-xl py-3 text-center text-sm font-bold transition-all border-slate-200 text-slate-500 hover:border-[#0d9488]/50';
+      document.getElementById('grade-1').className = grade === '1年' ? ACTIVE : INACTIVE;
+      document.getElementById('grade-2').className = grade === '2年' ? ACTIVE : INACTIVE;
+      document.getElementById('grade-3').className = grade === '3年' ? ACTIVE : INACTIVE;
+    }
+
+    // ========== クラス管理 ==========
+    function renderClasses() {
+      const ul = document.getElementById('class-list');
+      ul.innerHTML = '';
+      classes.forEach((cls, i) => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center gap-2 animate-fadeIn';
+        li.innerHTML = `
+          <span class="text-xs text-slate-400 font-bold w-5 text-right flex-shrink-0">${i + 1}</span>
+          <input type="text" value="${cls.name}"
+            oninput="classes[${i}].name = this.value"
+            class="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] transition" />
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <span class="text-xs text-slate-500 font-medium whitespace-nowrap">班の数</span>
+            <input type="number" value="${cls.groupCount}" min="1" max="20"
+              oninput="classes[${i}].groupCount = parseInt(this.value) || 1"
+              class="w-16 px-2 py-2.5 rounded-xl border border-slate-200 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] transition" />
+            <span class="text-xs text-slate-400">班</span>
+          </div>
+          <button type="button" onclick="deleteClass(${i})"
+            class="p-2 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition flex-shrink-0">
+            <i data-lucide="trash-2" style="width:15px;height:15px"></i>
+          </button>
+        `;
+        ul.appendChild(li);
+      });
+      lucide.createIcons();
+    }
+
+    function addClass() {
+      classes.push({ name: `${classes.length + 1}組`, groupCount: 5 });
+      renderClasses();
+    }
+
+    function deleteClass(i) {
+      if (classes.length <= 1) { alert('クラスは1つ以上必要です'); return; }
+      classes.splice(i, 1);
+      renderClasses();
+    }
+
+    // ========== 保存（上書き対応） ==========
+    async function saveSettings(e) {
+      if (e) e.preventDefault();
+
+      // 入力中の値を最新化
+      document.querySelectorAll('#class-list li').forEach((li, i) => {
+        const inputs = li.querySelectorAll('input');
+        if (classes[i]) {
+          classes[i].name       = inputs[0] ? inputs[0].value.trim() : '';
+          classes[i].groupCount = inputs[1] ? (parseInt(inputs[1].value) || 1) : 1;
+        }
+      });
+
+      if (classes.some(c => !c.name)) { alert('クラス名が空欄のものがあります'); return; }
+      if (classes.some(c => c.groupCount < 1)) { alert('班の数は1以上を入力してください'); return; }
+
+       // 入力された文字を取得
+      const rawTeacherInput = document.getElementById('teacher-name').value.trim();
+      if (!rawTeacherInput) { alert('担当教員名を入力してください'); return; }
+
+      // カンマや読点で区切られた名前の「前後の余計なスペース」を自動できれいに掃除する処理
+      const teacher = rawTeacherInput
+        .split(/[,，、]/)
+        .map(name => name.trim())
+        .filter(name => name !== '')
+        .join(','); // 最終的に「山田先生,田中先生」のように半角カンマで統一してサーバーに送ります
+
+      
+    　const studentPassword = document.getElementById('student-password').value.trim();
+      if (!studentPassword) { alert('生徒用パスワードを入力してください'); return; }
+
+      const school   = localStorage.getItem('qlink_school')   || '';
+      const password = localStorage.getItem('qlink_password') || '';
+
+      if (!school || !password) {
+        alert('学校名または管理用パスワードが取得できませんでした。最初の登録画面からやり直してください。');
+        return;
+      }
+
+      localStorage.setItem('qlink_teacher', teacher);
+
+      const payload = {
+        school,
+        teacher,
+        password,
+        studentPassword,
+        grade: selectedGrade,
+        classes
+      };
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+          alert('【保存失敗】\n' + (result.error || '不明なエラーが発生しました'));
+          return;
+        }
+
+        alert('【保存完了】\n設定を正常に保存（上書き）しました。\nログイン画面へ移動します。');
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        alert('【通信エラー】\nサーバーと通信できませんでした。\nNode.js（server.js）が起動しているか確認してください。');
+      }
+    }
+
+    // ========== 初期描画 ==========
+    const savedTeacher = localStorage.getItem('qlink_teacher') || '';
+    document.getElementById('teacher-name').value = savedTeacher;
+    renderClasses();
+  </script>
+</body>
+</html>

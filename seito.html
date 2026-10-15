@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="ja" style=""><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-LINK 生徒用アプリ利用ガイド＆利用規則</title>
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', '"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#0d9488',
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              600: '#0d9488',
+              700: '#0f766e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen select-none flex flex-col justify-between">
+  <!-- ヘッダー -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3.5 shadow-xs">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-xl font-extrabold text-[#0d9488] tracking-tight">Q-LINK</span>
+        <span class="bg-teal-50 text-teal-800 border border-teal-200/80 text-[11px] font-bold px-2 py-0.5 rounded-md">生徒用 / 修学旅行ガイド</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="shield-check" aria-hidden="true" class="lucide lucide-shield-check w-3.5 h-3.5 text-[#0d9488]"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
+          安全第一・班行動
+        </span>
+        <button type="button" class="relative p-2 text-slate-500 hover:text-slate-700 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bell" aria-hidden="true" class="lucide lucide-bell w-5 h-5"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-[#0d9488] rounded-full"></span>
+        </button>
+        <div class="w-8 h-8 rounded-full bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="book-open" aria-hidden="true" class="lucide lucide-book-open w-4 h-4"><path d="M12 5v16"></path><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"></path></svg>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- サブヘッダー / アクションバー -->
+  <div class="bg-white border-b border-slate-200 px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-2.5">
+          <h1 class="font-extrabold text-lg text-slate-900">生徒用アプリ利用ガイド＆利用規則</h1>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0d9488]"></span>
+            事前確認必須
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">修学旅行（大阪市内班別フィールドワーク） &gt; 生徒用端末の安全ルール・3大基本機能の使い方</p>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- メインコンテンツ (左右2カラム構成) -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      
+      <!-- 左カラム：生徒側の3大機能の使い方（マップ・課題・連絡） -->
+      <div class="space-y-6">
+        
+        <!-- セクション1: 生徒アプリの概要と3大機能 -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="smartphone" aria-hidden="true" class="lucide lucide-smartphone w-4 h-4 text-[#0d9488]"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><path d="M12 18h.01"></path></svg>
+              <span class="">生徒側アプリ 3つの基本機能</span>
+            </h2>
+            <span class="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded font-semibold">3 FUNCTIONS</span>
+          </div>
+
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Q-LINKの生徒用画面は、フィールドワークを安全かつスムーズに進めるための<strong class="text-teal-800">「マップ」「課題」「連絡」</strong>の3つの機能で構成されています。班長端末の画面下のタブからいつでも切り替えが可能です。
+          </p>
+
+          <!-- 3機能タブカードプレビュー -->
+          <div class="grid grid-cols-3 gap-2.5 pt-1">
+            <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-center space-y-1.5">
+              <div class="w-8 h-8 rounded-lg bg-[#0d9488] text-white flex items-center justify-center mx-auto shadow-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="map" aria-hidden="true" class="lucide lucide-map w-4 h-4"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"></path><path d="M15 5.764v15"></path><path d="M9 3.236v15"></path></svg>
+              </div>
+              <div class="text-xs font-extrabold text-teal-900">1. マップ</div>
+              <p class="text-[10px] text-teal-700 font-medium">現在地・観光地・境界線・避難所確認</p>
+            </div>
+            
+            <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-center space-y-1.5">
+              <div class="w-8 h-8 rounded-lg bg-[#0d9488] text-white flex items-center justify-center mx-auto shadow-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="check-square" aria-hidden="true" class="lucide lucide-check-square w-4 h-4"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"></path><path d="m9 11 3 3L22 4"></path></svg>
+              </div>
+              <div class="text-xs font-extrabold text-teal-900">2. 課題</div>
+              <p class="text-[10px] text-teal-700 font-medium">現地クイズ回答・探究写真提出</p>
+            </div>
+
+            <div class="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-center space-y-1.5">
+              <div class="w-8 h-8 rounded-lg bg-[#0d9488] text-white flex items-center justify-center mx-auto shadow-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="message-square" aria-hidden="true" class="lucide lucide-message-square w-4 h-4"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <div class="text-xs font-extrabold text-teal-900">3. 連絡</div>
+              <p class="text-[10px] text-teal-700 font-medium">先生とのチャット・点呼チェックイン</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- セクション2: 各機能の詳しい使い方 -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="compass" aria-hidden="true" class="lucide lucide-compass w-4 h-4 text-[#0d9488]"><circle cx="12" cy="12" r="10"></circle><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"></path></svg>
+              <span class="">機能別の詳しい使い方と操作手順</span>
+            </h2>
+          </div>
+
+          <div class="space-y-4">
+            <!-- 1. マップ機能の説明 -->
+            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 font-bold text-xs text-slate-900">
+                  <span class="w-5 h-5 rounded-full bg-[#0d9488] text-white flex items-center justify-center text-[10px]">1</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="map-pin" aria-hidden="true" class="lucide lucide-map-pin w-3.5 h-3.5 text-[#0d9488]"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  <span class="">マップ機能（GIS現在地＆活動可能エリア監視）</span>
+                </div>
+                <span class="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">GPS連動</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed pl-7">
+                ・班長端末のGPSにより、地図上に班の現在地が教師側に表示されます。<br>
+                ・地図上のピン（大阪城、難波神社、適塾、道頓堀など）をタップすると、目的地までのルートや課題の確認できます。
+              </p>
+            </div>
+
+            <!-- 2. 課題機能の説明 -->
+            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 font-bold text-xs text-slate-900">
+                  <span class="w-5 h-5 rounded-full bg-[#0d9488] text-white flex items-center justify-center text-[10px]">2</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="award" aria-hidden="true" class="lucide lucide-award w-3.5 h-3.5 text-[#0d9488]"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"></path><circle cx="12" cy="8" r="6"></circle></svg>
+                  <span class="">課題機能（探究クイズ回答＆写真アップロード）</span>
+                </div>
+                <span class="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">ミッション達成</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed pl-7">
+                ・各観光スポットに到着すると、先生から配信された「現地チェッククイズ」に挑戦できます。<br>
+                ・指定されたアングルで班員全員や名所の「現地写真」を撮影して提出します（卒アル候補写真として保存されます）。<br>
+                ・提出が完了すると先生の管理画面にリアルタイムで反映され、次のミッションへ進めます。
+              </p>
+            </div>
+
+            <!-- 3. 連絡機能の説明 -->
+            <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 font-bold text-xs text-slate-900">
+                  <span class="w-5 h-5 rounded-full bg-[#0d9488] text-white flex items-center justify-center text-[10px]">3</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="send" aria-hidden="true" class="lucide lucide-send w-3.5 h-3.5 text-[#0d9488]"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>
+                  <span class="">連絡機能（本部・担任への業務チャット＆緊急通達）</span>
+                </div>
+                <span class="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded">緊急対応可</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed pl-7">
+                ・体調不良、道に迷った、集合時間の遅れなどの相談を文字で先生に素早く送信できます。<br>
+                ・先生からの「一斉点呼要請」が届いたら、ワンタップで「現在地チェックイン」を完了させてください。<br></p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 右カラム：利用規則（ルール・マナー・禁止事項・緊急時対応） -->
+      <div class="space-y-6">
+        
+        <!-- セクション3: 端末利用規則＆マナー -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-check-2" aria-hidden="true" class="lucide lucide-file-check-2 w-4 h-4 text-[#0d9488]"><path d="M10.5 22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v6"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m14 20 2 2 4-4"></path></svg>
+              <span class="">Q-LINK 端末利用規則・お約束</span>
+            </h2>
+            <span class="text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200/80 px-2 py-0.5 rounded">ルール厳守</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- 規則1 -->
+            <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="w-6 h-6 rounded-md bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800">班長端末は常に携帯し、単独行動をしない</h3>
+                <p class="text-[11px] text-slate-600 mt-0.5">GPS端末を持っている班長から離れて別行動することは絶対に禁止です。常に全員がまとまって行動してください。</p>
+              </div>
+            </div>
+
+            <!-- 規則2 -->
+            <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="w-6 h-6 rounded-md bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800">歩きスマホ・動画視聴・ゲーム利用の禁止</h3>
+                <p class="text-[11px] text-slate-600 mt-0.5">歩行中の画面注視は交通事故の原因になります。画面の確認やクイズ回答は必ず歩道の端など安全な場所で立ち止まって行います。</p>
+              </div>
+            </div>
+
+            <!-- 規則3 -->
+            <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="w-6 h-6 rounded-md bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800">活動エリア（ジオフェンス境界）の遵守</h3>
+                <p class="text-[11px] text-slate-600 mt-0.5">学校で指定された許可エリア外へ出ることはできません。境界に近づくと警告音が鳴り、本部教員に通知されます。</p>
+              </div>
+            </div>
+
+            <!-- 規則4 -->
+            <div class="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="w-6 h-6 rounded-md bg-[#0d9488] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800">私的な写真撮影やSNS投稿の厳禁</h3>
+                <p class="text-[11px] text-slate-600 mt-0.5">修学旅行中の写真は探究学習・卒アル作成を目的としています。一般の方の無断撮影やSNSへの投稿は固く禁止します。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- セクション4: 緊急時のトラブルシューティング＆チェックイン -->
+        <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h2 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="alert-triangle" aria-hidden="true" class="lucide lucide-alert-triangle w-4 h-4 text-amber-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+              <span class="">こんなときはどうする？（困ったときの対応）</span>
+            </h2>
+            <span class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded">緊急対応</span>
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="p-3 bg-amber-50/50 rounded-xl border border-amber-200 text-xs">
+              <div class="font-bold text-amber-900 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="battery-warning" aria-hidden="true" class="lucide lucide-battery-warning w-4 h-4 text-amber-600"><path d="M10 17h.01"></path><path d="M10 7v6"></path><path d="M14 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"></path><path d="M22 14v-4"></path><path d="M6 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"></path></svg>
+                バッテリー残量が20%以下になった場合
+              </div>
+              <p class="text-[11px] text-amber-800 mt-1 leading-relaxed">
+                画面の明るさを下げ、不要なアプリを終了してください。緊急時は連絡タブから担任の先生に現在のバッテリー残量と現在地を報告してください。
+              </p>
+            </div>
+
+            <div class="p-3 bg-rose-50/50 rounded-xl border border-rose-200 text-xs">
+              <div class="font-bold text-rose-900 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="phone-call" aria-hidden="true" class="lucide lucide-phone-call w-4 h-4 text-rose-600"><path d="M13 2a9 9 0 0 1 9 9"></path><path d="M13 6a5 5 0 0 1 5 5"></path><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"></path></svg>
+                班員がはぐれた・体調が悪くなった場合
+              </div>
+              <p class="text-[11px] text-rose-800 mt-1 leading-relaxed">
+                その場で直ちに立ち止まり、「連絡」タブから「体調不良／迷子」を選択して先生にチャットを送信してください。移動せずその場で待機します。
+              </p>
+            </div>
+          </div>
+
+          <!-- 同意チェックボックス＆確認アクション -->
+          <div class="pt-3 border-t border-slate-100 space-y-3">
+            <label class="flex items-center gap-2.5 p-3 bg-teal-50/60 rounded-xl border border-teal-300 cursor-pointer transition hover:bg-teal-50">
+              <input type="checkbox" id="agree-checkbox" checked="" class="w-4 h-4 text-[#0d9488] focus:ring-[#0d9488] rounded">
+              <span class="text-xs font-bold text-teal-900">上記3つの機能の使い方と利用規則を全て理解し、守ることを誓います</span>
+            </label>
+            
+            <div class="flex items-center justify-end gap-3">
+              
+              <button type="button" onclick="history.back()" class="px-5 py-2.5 bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" aria-hidden="true" class="lucide lucide-arrow-right w-4 h-4"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                <span class="">アプリを利用開始する</span>
+              </button>
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+
+
+
+
+</body></html>

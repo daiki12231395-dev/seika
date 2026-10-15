@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="qlinkBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="60%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <radialGradient id="qlinkGlow" cx="30%" cy="25%" r="75%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0d9488" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="linkAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#042f2e" flood-opacity="0.32"/>
+    </filter>
+    <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#042f2e" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect x="16" y="16" width="480" height="480" rx="112" ry="112" fill="url(#qlinkBgGrad)"/>
+  <rect x="16" y="16" width="480" height="480" rx="112" ry="112" fill="url(#qlinkGlow)"/>
+  <rect x="18" y="18" width="476" height="476" rx="110" ry="110" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.35"/>
+
+  <circle cx="150" cy="130" r="7" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="340" cy="116" r="6" fill="#ffffff" fill-opacity="0.35"/>
+  <path d="M 158 134 Q 210 102 334 118" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5,7" stroke-opacity="0.3"/>
+
+  <g filter="url(#shadow)">
+    <ellipse cx="248" cy="204" rx="92" ry="96" fill="none" stroke="#ffffff" stroke-width="38" stroke-linecap="round"/>
+    <circle cx="248" cy="204" r="23" fill="url(#linkAccent)"/>
+    <circle cx="248" cy="204" r="11" fill="#ffffff"/>
+    <path d="M 288 248 L 356 326" stroke="#ffffff" stroke-width="38" stroke-linecap="round"/>
+    <circle cx="356" cy="326" r="18" fill="url(#linkAccent)" stroke="#ffffff" stroke-width="7"/>
+    <circle cx="356" cy="326" r="6" fill="#0f766e"/>
+  </g>
+
+  <g filter="url(#textShadow)">
+    <text x="256" y="420"
+          font-family="-apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Segoe UI', sans-serif"
+          font-size="44"
+          font-weight="800"
+          letter-spacing="12"
+          text-anchor="middle"
+          fill="#ffffff">LINK</text>
+    <circle cx="256" cy="444" r="3.5" fill="#5eead4"/>
+  </g>
+</svg>

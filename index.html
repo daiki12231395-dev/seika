@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-LINK - 修学旅行探究アプリ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#faf8ff] flex flex-col justify-between items-center p-4 font-sans text-slate-800">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="w-full max-w-5xl py-6 px-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-[#0d9488] flex items-center justify-center text-white font-bold shadow-md">Q</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-xl tracking-tight text-slate-900">Q-LINK</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 font-medium">探究アプリ</span>
+        </div>
+        <p class="text-[11px] text-slate-400 font-medium">Field Adventure &amp; Quest Platform</p>
+      </div>
+    </div>
+    <span class="text-xs bg-white text-slate-500 border border-slate-200 px-2.5 py-1 rounded-full shadow-sm">Ver 2.6</span>
+  </header>
+
+  <!-- ===== メインカード ===== -->
+  <main class="w-full max-w-md my-auto">
+    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+
+      <!-- ロール切り替えタブ -->
+      <div class="flex bg-slate-100/80 p-1.5 rounded-2xl mb-7">
+        <button id="tab-teacher" type="button" onclick="switchRole('teacher')"
+          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all bg-[#0d9488] text-white shadow-sm">
+          <i data-lucide="school" style="width:16px;height:16px"></i>
+          教師用ログイン
+        </button>
+        <button id="tab-student" type="button" onclick="switchRole('student')"
+          class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all text-slate-600">
+          <i data-lucide="users" style="width:16px;height:16px"></i>
+          生徒用ログイン
+        </button>
+      </div>
+
+      <!-- ===== 教師用フォーム ===== -->
+      <form id="teacher-form" onsubmit="handleTeacherLogin(event)" class="space-y-4">
+
+        <!-- エラー表示 -->
+        <div id="teacher-error"
+          class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-2 animate-fadeIn">
+          <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0"></i>
+          <span id="teacher-error-text"></span>
+        </div>
+
+        <!-- 学校ID (追加) -->
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-1">学校ID</label>
+          <input type="text" id="teacher-school-id" placeholder="例: school1" required
+            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+        </div>
+
+        <!-- 担当教員名 -->
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-1">担当教員の名前</label>
+          <input type="text" id="teacher-name" placeholder="例: 山田 太郎" required
+            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+        </div>
+
+        <!-- パスワード -->
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-1">パスワード</label>
+          <div class="relative">
+            <input type="password" id="teacher-password" placeholder="パスワードを入力" required
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+            <button type="button" id="eye-btn-teacher" onclick="togglePassword('teacher')"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+              <i data-lucide="eye-off" style="width:16px;height:16px"></i>
+            </button>
+          </div>
+          <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+            <input type="checkbox" id="remember-teacher" checked class="w-4 h-4 rounded border-slate-300" style="accent-color:#0d9488" />
+            <span class="text-xs text-slate-600">ログイン情報を記憶する</span>
+          </label>
+        </div>
+
+        <!-- ログインボタン -->
+        <button type="submit"
+          class="w-full py-3.5 px-4 bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.99] mt-2">
+          <span>ログイン</span>
+          <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+        </button>
+
+        <!-- サブリンク -->
+        <div class="flex items-center justify-center pt-2 text-xs">
+          <a href="register.html" class="text-[#0d9488] hover:underline font-semibold flex items-center gap-1">
+            <i data-lucide="user-plus" style="width:14px;height:14px"></i>
+            新規登録（初回設定）
+          </a>
+        </div>
+      </form>
+
+      <!-- ===== 生徒用フォーム ===== -->
+      <form id="student-form" onsubmit="handleStudentLogin(event)" class="space-y-4 hidden">
+
+        <!-- エラー表示 -->
+        <div id="student-error"
+          class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-2 animate-fadeIn">
+          <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0"></i>
+          <span id="student-error-text"></span>
+        </div>
+
+        <!-- 学校ID -->
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-1">学校ID</label>
+          <input type="text" id="student-school-id" placeholder="例: school1" required
+            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+        </div>
+
+        <!-- 組・班選択欄 -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-bold text-slate-900 mb-1">組（クラス）</label>
+            <input type="text" id="student-class" placeholder="例: 1組" required
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-900 mb-1">班</label>
+            <input type="text" id="student-group" placeholder="例: 1班" required
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+          </div>
+        </div>
+
+        <!-- 生徒用パスワード -->
+        <div>
+          <label class="block text-sm font-bold text-slate-900 mb-1">生徒用パスワード</label>
+          <div class="relative">
+            <input type="password" id="student-password" placeholder="パスワードを入力" required
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30 focus:border-[#0d9488] text-sm text-slate-800 transition" />
+            <button type="button" id="eye-btn-student" onclick="togglePassword('student')"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+              <i data-lucide="eye-off" style="width:16px;height:16px"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- ログインボタン -->
+        <button type="submit"
+          class="w-full py-3.5 px-4 bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.99] mt-2">
+          <span>探究活動をはじめる</span>
+          <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+        </button>
+      </form>
+
+    </div>
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="w-full py-6 text-center text-xs text-slate-400">
+    © 2026 Q-LINK Fieldwork Quest System. All rights reserved.
+  </footer>
+
+  <!-- ===== JavaScript ===== -->
+  <script>
+    lucide.createIcons();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTeacher  = localStorage.getItem('qlink_saved_teacher');
+      const savedSchoolId = localStorage.getItem('qlink_saved_teacher_school_id');
+      if (savedTeacher) {
+        document.getElementById('teacher-name').value = savedTeacher;
+      }
+      if (savedSchoolId) {
+        document.getElementById('teacher-school-id').value = savedSchoolId;
+      }
+    });
+
+    function switchRole(role) {
+      const ACTIVE   = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all bg-[#0d9488] text-white shadow-sm';
+      const INACTIVE = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all text-slate-600';
+
+      if (role === 'teacher') {
+        document.getElementById('tab-teacher').className = ACTIVE;
+        document.getElementById('tab-student').className = INACTIVE;
+        document.getElementById('teacher-form').classList.remove('hidden');
+        document.getElementById('student-form').classList.add('hidden');
+      } else {
+        document.getElementById('tab-student').className = ACTIVE;
+        document.getElementById('tab-teacher').className = INACTIVE;
+        document.getElementById('student-form').classList.remove('hidden');
+        document.getElementById('teacher-form').classList.add('hidden');
+      }
+      document.getElementById('teacher-error').classList.add('hidden');
+      document.getElementById('student-error').classList.add('hidden');
+    }
+
+    function togglePassword(role) {
+      const input = document.getElementById(`${role}-password`);
+      const eyeBtn = document.getElementById(`eye-btn-${role}`);
+      const isPw = input.type === 'password';
+      
+      input.type = isPw ? 'text' : 'password';
+      eyeBtn.innerHTML = `<i data-lucide="${isPw ? 'eye' : 'eye-off'}" style="width:16px;height:16px"></i>`;
+      lucide.createIcons();
+    }
+
+    async function handleTeacherLogin(e) {
+      e.preventDefault();
+      const school_id = document.getElementById('teacher-school-id').value.trim();
+      const teacher   = document.getElementById('teacher-name').value.trim();
+      const password  = document.getElementById('teacher-password').value.trim();
+      const remember  = document.getElementById('remember-teacher').checked;
+
+      const errDiv = document.getElementById('teacher-error');
+      const errTxt = document.getElementById('teacher-error-text');
+
+      try {
+        const res = await fetch('/api/login/teacher', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ school_id, teacher, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (remember) {
+            localStorage.setItem('qlink_saved_teacher', teacher);
+            localStorage.setItem('qlink_saved_teacher_school_id', school_id);
+          } else {
+            localStorage.removeItem('qlink_saved_teacher');
+            localStorage.removeItem('qlink_saved_teacher_school_id');
+          }
+
+          localStorage.setItem('qlink_role', 'teacher');
+          localStorage.setItem('qlink_school_id', data.school_id || school_id);
+          localStorage.setItem('qlink_school', data.school_name);
+          localStorage.setItem('qlink_teacher', data.teacher);
+
+          window.location.href = 'tech.html';
+        } else {
+          errTxt.textContent = data.error || '学校ID、教員名またはパスワードが一致しません。';
+          errDiv.classList.remove('hidden');
+          lucide.createIcons();
+        }
+      } catch {
+        errTxt.textContent = 'サーバーに接続できません。';
+        errDiv.classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+
+    async function handleStudentLogin(e) {
+      e.preventDefault();
+      const school_id   = document.getElementById('student-school-id').value.trim();
+      const className   = document.getElementById('student-class').value.trim();
+      const group       = document.getElementById('student-group').value.trim();
+      const password    = document.getElementById('student-password').value.trim();
+
+      const errDiv = document.getElementById('student-error');
+      const errTxt = document.getElementById('student-error-text');
+
+      try {
+        const res = await fetch('/api/login/student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ school_id, className, group, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // 生徒のセッション情報を保存
+          sessionStorage.setItem('qlink_role', 'student');
+          sessionStorage.setItem('qlink_school_id', data.school_id);
+          sessionStorage.setItem('qlink_school_name', data.school_name);
+          sessionStorage.setItem('qlink_class', data.class);
+          sessionStorage.setItem('qlink_group', data.group);
+          sessionStorage.setItem('qlink_data_path', data.data_path);
+
+          localStorage.setItem('qlink_role', 'student');
+          localStorage.setItem('qlink_school_id', data.school_id);
+          localStorage.setItem('qlink_school', data.school_name);
+          localStorage.setItem('qlink_class', data.class);
+          localStorage.setItem('qlink_group', data.group);
+          localStorage.setItem('qlink_data_path', data.data_path);
+
+          window.location.href = 'stu.html';
+        } else {
+          errTxt.textContent = data.error || 'ログイン情報が正しくありません。';
+          errDiv.classList.remove('hidden');
+          lucide.createIcons();
+        }
+      } catch {
+        errTxt.textContent = 'サーバーに接続できません。';
+        errDiv.classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+  </script>
+</body>
+</html>

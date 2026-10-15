@@ -1,0 +1,12 @@
+{
+  "name": "osaka-gis-starter",
+  "version": "1.0.0",
+  "description": "Q-LINK 修学旅行探究アプリ",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

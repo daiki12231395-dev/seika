@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-LINK - 課題写真管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="min-h-screen bg-[#f0fdf9] font-sans text-slate-800">
+
+  <!-- ヘッダー -->
+  <header class="bg-white border-b border-slate-200 shadow-sm px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-[#0d9488] flex items-center justify-center text-white font-extrabold text-sm">Q</div>
+      <div>
+        <span class="font-extrabold text-lg tracking-tight text-slate-900">Q-LINK</span>
+        <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 font-medium">課題写真管理</span>
+      </div>
+    </div>
+    <a href="index.html" class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 transition">
+      <i data-lucide="arrow-left" style="width:14px;height:14px"></i>
+      トップへ戻る
+    </a>
+  </header>
+
+  <!-- メイン -->
+  <main class="max-w-2xl mx-auto px-4 py-6">
+
+    <!-- タイトル行 -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="font-extrabold text-xl text-slate-900">課題写真一覧</h1>
+        <p class="text-xs text-slate-500 mt-0.5">data/kanri/ フォルダの写真 ／ 削除はすぐ反映されます</p>
+      </div>
+      <button onclick="loadPhotos()"
+        class="flex items-center gap-1 text-xs text-teal-600 border border-teal-300 px-3 py-1.5 rounded-xl hover:bg-teal-50 transition font-bold">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
+        更新
+      </button>
+    </div>
+
+    <!-- 件数バッジ -->
+    <div id="count-badge" class="text-xs text-slate-500 mb-3"></div>
+
+    <!-- 写真グリッド -->
+    <div id="photo-grid" class="grid grid-cols-2 gap-3"></div>
+
+    <!-- 空メッセージ -->
+    <div id="empty-msg" class="hidden text-center py-16 text-slate-400">
+      <i data-lucide="image-off" style="width:40px;height:40px;margin:0 auto 12px;display:block;color:#cbd5e1"></i>
+      <p class="font-bold text-sm">写真がまだありません</p>
+      <p class="text-xs mt-1">生徒が課題写真を提出すると、ここに表示されます</p>
+    </div>
+
+    <!-- エラーメッセージ -->
+    <div id="error-msg" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-sm px-4 py-3 rounded-xl mt-4">
+      サーバーに接続できません。サーバーが起動しているか確認してください。
+    </div>
+
+  </main>
+
+  <!-- 拡大表示モーダル -->
+  <div id="modal" class="hidden fixed inset-0 bg-slate-900/70 flex items-center justify-center z-50 p-4" onclick="closeModal()">
+    <div class="bg-white rounded-2xl overflow-hidden shadow-2xl max-w-lg w-full" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <p id="modal-filename" class="text-sm font-bold text-slate-800 truncate max-w-xs"></p>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" style="width:20px;height:20px"></i>
+        </button>
+      </div>
+      <img id="modal-img" src="" alt="" class="w-full max-h-96 object-contain bg-slate-50">
+      <div class="p-3 flex justify-end">
+        <button id="modal-delete-btn"
+          class="flex items-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm rounded-xl transition">
+          <i data-lucide="trash-2" style="width:16px;height:16px"></i>
+          この写真を削除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    async function loadPhotos() {
+      const grid  = document.getElementById('photo-grid');
+      const empty = document.getElementById('empty-msg');
+      const errEl = document.getElementById('error-msg');
+      const badge = document.getElementById('count-badge');
+      grid.innerHTML = '<p class="text-slate-400 text-sm col-span-2 text-center py-8">読み込み中...</p>';
+      empty.classList.add('hidden');
+      errEl.classList.add('hidden');
+
+      try {
+        const res   = await fetch('/api/photos');
+        const files = await res.json();
+
+        badge.textContent = `全 ${files.length} 枚`;
+
+        if (!files.length) {
+          grid.innerHTML = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+
+        grid.innerHTML = files.map(f => {
+          const url = '/data/kanri/' + encodeURIComponent(f.filename);
+          return `
+            <div class="bg-white rounded-2xl shadow border border-slate-100 overflow-hidden flex flex-col">
+              <div class="relative group cursor-pointer" onclick="openModal('${encodeURIComponent(f.filename)}', '${f.filename.replace(/'/g, '&#39;')}')">
+                <img src="${url}" alt="${f.filename}" class="w-full h-36 object-cover">
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+                  <i data-lucide="zoom-in" style="width:24px;height:24px;color:white;opacity:0;" class="group-hover:opacity-100 transition"></i>
+                </div>
+              </div>
+              <div class="px-3 py-2 flex items-center justify-between gap-2">
+                <p class="text-xs text-slate-600 truncate flex-1">${f.filename}</p>
+                <button onclick="deletePhoto('${f.filename.replace(/'/g, '\\\'')}')"
+                  class="flex-shrink-0 flex items-center gap-1 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg transition font-bold">
+                  <i data-lucide="trash-2" style="width:13px;height:13px"></i>
+                  削除
+                </button>
+              </div>
+            </div>`;
+        }).join('');
+
+        lucide.createIcons();
+      } catch {
+        grid.innerHTML = '';
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function deletePhoto(filename) {
+      if (!confirm(`「${filename}」を削除しますか？\nこの操作は取り消せません。`)) return;
+      try {
+        const res  = await fetch('/api/photos/' + encodeURIComponent(filename), { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          loadPhotos();
+        } else {
+          alert('削除に失敗しました: ' + (data.error || ''));
+        }
+      } catch {
+        alert('サーバーに接続できません');
+      }
+    }
+
+    function openModal(encodedFilename, filename) {
+      document.getElementById('modal-img').src = '/data/kanri/' + encodedFilename;
+      document.getElementById('modal-filename').textContent = filename;
+      document.getElementById('modal-delete-btn').onclick = () => {
+        closeModal();
+        deletePhoto(filename);
+      };
+      document.getElementById('modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    loadPhotos();
+  </script>
+</body>
+</html>

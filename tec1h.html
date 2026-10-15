@@ -1,0 +1,3032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q-LINK - 教師用ダッシュボード</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet & PapaParse -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', '"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#0d9488',
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              600: '#0d9488',
+              700: '#0f766e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes alertPulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.18); opacity: 0.35; }
+    }
+    .animate-alert-pulse { animation: alertPulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+    #leaflet-map, #gathering-leaflet-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+    .custom-pin-marker {
+      background: #0d9488;
+      border: 2.5px solid #ffffff;
+      color: white;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .custom-pin-marker::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 7px solid #0d9488;
+    }
+
+    /* 位置情報メモ用ピン */
+    .memo-pin-marker {
+      background: #0d9488;
+      border: 2.5px solid #ffffff;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .memo-pin-marker::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 7px solid #0d9488;
+    }
+
+    /* 設定ドロップダウン */
+    .tech-setting-item {
+      display: block; width: 100%; text-align: left;
+      padding: 9px 16px; font-size: 12px; font-weight: 600;
+      color: #334155; background: none; border: none;
+      border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.15s;
+    }
+    .tech-setting-item:hover { background: #f8fafc; color: #0d9488; }
+    .tech-setting-item:last-child { border-bottom: none; }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-24 select-none flex flex-col justify-between">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-6 py-3 shadow-sm">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="qlink-icon.svg" alt="Q-LINK" class="w-9 h-9 rounded-xl shadow-sm" />
+        <div>
+          <span class="font-extrabold text-lg text-slate-900 tracking-tight">Q-LINK 教師管理画面</span>
+          <div class="flex items-center gap-1.5 text-xs text-teal-700 font-medium">
+            <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+            リアルタイム監視中
+          </div>
+        </div>
+      </div>
+      <div id="teacher-info" class="flex items-center gap-3 text-xs text-slate-500 font-semibold">
+        <span>ログイン中: <strong id="display-teacher-name" class="text-slate-800">----</strong></span>
+        <!-- 設定ボタン -->
+        <div style="position:relative;" id="tech-settings-wrapper">
+          <button id="tech-settings-btn" onclick="toggleTechSettings()" class="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">⚙ 設定</button>
+          <div id="tech-settings-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.13);min-width:175px;z-index:200;overflow:hidden;">
+            <button class="tech-setting-item" onclick="techSettingSelect('課題作成')">課題作成</button>
+            <button class="tech-setting-item" onclick="window.location.href='seito.html'">生徒画面の使い方</button>
+            <button class="tech-setting-item" onclick="window.location.href='sennseino.html'">先生画面の使い方</button>
+            <button class="tech-setting-item" onclick="window.location.href='kiyousi3.html'">アカウント管理</button>
+            <button class="tech-setting-item" onclick="techSettingSelect('集合場所・日時')">集合場所・日時</button>
+        
+          </div>
+        </div>
+        <button onclick="window.location.href='index.html'" class="px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 hover:bg-rose-100 transition">ログアウト</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast 通知 -->
+  <div id="save-toast" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg"></div>
+
+  <!-- ===== メインコンテンツ ===== -->
+  <main class="max-w-6xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- ========== セクション: マップ (デフォルト表示) ========== -->
+    <div id="section-map" class="space-y-6">
+
+      <!-- 上部ステータスバー -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full bg-teal-500"></span>
+          <div>
+            <h1 class="font-bold text-slate-900 text-base">フィールドワーク・リアルタイム監視</h1>
+            <span id="gps-update-time" class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium inline-block mt-0.5">GPS未受信</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 md:w-1/2">
+          <div class="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-100">
+            <div class="text-xs font-bold text-slate-500 mb-0.5">表示中の班</div>
+            <div class="flex items-baseline justify-center gap-0.5">
+              <span id="stat-active-count" class="text-2xl font-extrabold text-teal-700">0</span>
+              <span class="text-xs font-bold text-slate-400">班</span>
+            </div>
+          </div>
+          <div class="bg-teal-50/50 rounded-xl p-2.5 text-center border border-teal-100">
+            <div class="text-xs font-bold text-teal-700 mb-0.5">安全圏内</div>
+            <div class="flex items-baseline justify-center gap-0.5">
+              <span id="stat-safe-count" class="text-2xl font-extrabold text-teal-800">0</span>
+              <span class="text-xs font-bold text-teal-700">班 正常</span>
+            </div>
+          </div>
+          <div class="bg-amber-50/60 rounded-xl p-2.5 text-center border border-amber-200">
+            <div class="text-xs font-bold text-amber-800 mb-0.5">エリア注意</div>
+            <div class="flex items-baseline justify-center gap-0.5">
+              <span id="stat-alert-count" class="text-2xl font-extrabold text-amber-900">0</span>
+              <span class="text-xs font-bold text-amber-800">班 接近</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- マップ領域＆クラス選択ヘッダー -->
+      <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-slate-800 flex items-center gap-2 text-base">
+            <i data-lucide="map-pin" class="text-teal-600" style="width:20px;height:20px"></i>
+            リアルタイム位置情報マップ (GIS)
+          </h2>
+
+          <!-- クラス選択ドロップダウン -->
+          <div class="relative">
+            <button type="button" id="class-dropdown-btn" onclick="toggleDropdown()"
+              class="border border-teal-600/30 bg-teal-50 hover:bg-teal-100 transition rounded-full px-4 py-1.5 flex items-center gap-2 text-xs font-bold text-teal-800 shadow-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+              <span id="selected-class-label">全体</span>
+              <span id="selected-class-badge" class="hidden text-[10px] bg-teal-200/60 text-teal-900 px-1.5 py-0.5 rounded-full"></span>
+              <i id="class-dropdown-icon" data-lucide="chevron-down" style="width:14px;height:14px"></i>
+            </button>
+            
+            <div id="class-dropdown-menu"
+              class="hidden absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-2xl shadow-lg py-1.5 z-50 divide-y divide-slate-100">
+              <!-- 動的生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- GISマップ描画エリア -->
+        <div class="relative w-full h-80 md:h-96 bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+          <div id="leaflet-map"></div>
+
+          <!-- ターゲティング（現在地復帰）コントロールボタン -->
+          <button type="button" onclick="centerToTeacherLocation()" title="現在地に移動"
+            class="absolute top-3 right-3 z-20 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl p-2.5 shadow-md transition flex items-center justify-center active:scale-95">
+            <i data-lucide="crosshair" class="text-teal-700" style="width:18px;height:18px"></i>
+          </button>
+
+          <div class="absolute bottom-2.5 left-3.5 right-3.5 z-20 bg-white/90 backdrop-blur-sm px-3.5 py-2 rounded-xl border border-slate-200 text-xs flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-1.5 text-slate-600 font-medium"><span class="w-2 h-2 rounded-full bg-teal-600"></span>ピンをタップでマップ移動</div>
+            <span class="text-teal-700 font-bold">GISレイヤー連動中</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 全班ステータス一覧 -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 id="group-status-title" class="font-bold text-base text-slate-900 flex items-center gap-2">
+            <i data-lucide="users" class="text-teal-600" style="width:20px;height:20px"></i>
+            全班ステータス一覧
+          </h3>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="setAllGroups(true)" class="text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-100 transition flex items-center gap-1">
+              <i data-lucide="eye" style="width:14px;height:14px"></i> 全表示
+            </button>
+            <button type="button" onclick="setAllGroups(false)" class="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-200 transition flex items-center gap-1">
+              <i data-lucide="eye-off" style="width:14px;height:14px"></i> 全非表示
+            </button>
+          </div>
+        </div>
+
+        <!-- 2列並びの班カード描画コンテナ -->
+        <div id="group-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- JSでここに班カードが読み込まれます -->
+        </div>
+
+        <!-- 一斉チェックイン要請ボタン -->
+        <button type="button" onclick="requestRollCall()" class="w-full py-4 bg-[#0d9488] hover:bg-teal-700 text-white font-bold text-sm rounded-2xl shadow-md transition flex items-center justify-center gap-2 active:scale-[0.99] mt-2">
+          <i data-lucide="radio" style="width:18px;height:18px"></i>
+          <span>全班一斉チェックイン要請（点呼確認）</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ========== セクション: 課題進捗管理 ========== -->
+    <div id="section-progress" class="hidden space-y-6">
+
+      <!-- 進捗正解率ダッシュボード -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
+            📊 進捗・正解率ダッシュボード
+          </h2>
+        </div>
+
+        <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
+          <button type="button" id="tab-grade" onclick="switchAccuracyTab('grade')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-teal-700 shadow-xs">
+            学年全体
+          </button>
+          <button type="button" id="tab-class" onclick="switchAccuracyTab('class')" class="flex-1 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+            クラス全体
+          </button>
+          <button type="button" id="tab-group" onclick="switchAccuracyTab('group')" class="flex-1 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+            班個別
+          </button>
+        </div>
+
+        <div id="accuracy-group-select-wrapper" class="hidden pt-1">
+          <label class="block text-xs font-bold text-slate-600 mb-1">表示対象の班を選択:</label>
+          <select id="accuracy-group-select" onchange="renderAccuracyUI()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </select>
+        </div>
+
+        <div class="p-5 bg-gradient-to-br from-teal-50 to-slate-50 rounded-2xl border border-teal-100 flex flex-col items-center justify-center gap-1 shadow-xs">
+          <span id="accuracy-display-label" class="text-xs font-bold text-teal-800">学年全体の正解率</span>
+          <div class="flex items-baseline gap-1">
+            <strong id="active-accuracy-value" class="text-4xl font-black text-teal-700">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- デバッグ用 班追加・削除 & 進捗設定パネル -->
+      <div id="progress-debug-panel" class="bg-slate-900 text-white rounded-2xl p-4 shadow-lg border border-slate-700 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="font-extrabold text-xs text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="bug" class="w-4 h-4"></i> デバッグ用 班の追加・削除 & 進捗設定パネル
+          </span>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">DEBUG ONLY</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div>
+            <label for="debug-target-class" class="block text-[11px] font-bold text-slate-300 mb-1">対象の組 (クラス):</label>
+            <input type="text" id="debug-target-class" value="1組" placeholder="例: 1組" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500 font-mono">
+          </div>
+
+          <div>
+            <label for="debug-target-group" class="block text-[11px] font-bold text-slate-300 mb-1">対象の班番号/名:</label>
+            <input type="text" id="debug-target-group" placeholder="例: 5 または 5班" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500 font-mono">
+          </div>
+
+          <div>
+            <label for="debug-spot-count" class="block text-[11px] font-bold text-slate-300 mb-1">クリア済みスポット数 (0〜4):</label>
+            <select id="debug-spot-count" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500">
+              <option value="0">0箇所 (未開始)</option>
+              <option value="1">1箇所クリア (大阪城)</option>
+              <option value="2">2箇所クリア</option>
+              <option value="3">3箇所クリア</option>
+              <option value="4">4箇所クリア (全制覇)</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2">
+            <button type="button" onclick="applyDebugAddGroup()" class="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs py-2 px-2 transition shadow-sm active:scale-95 rounded-xl whitespace-nowrap">
+              班を追加/設定
+            </button>
+            <button type="button" onclick="applyDebugDeleteGroup()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs py-2 px-2 transition active:scale-95 rounded-xl whitespace-nowrap">
+              班を削除
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="pt-2 px-1 flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">課題進捗管理</h1>
+            <span class="bg-teal-50 text-teal-700 text-xs px-3 py-1 rounded-full font-bold">リアルタイム更新</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">大阪城・難波神社・適塾・道頓堀の4スポットの訪問状況および提出課題を監視します</p>
+        </div>
+        <button onclick="renderProgressSection()" class="self-start md:self-auto px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs hover:bg-slate-50 transition flex items-center gap-1.5">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-teal-600"></i> 最新状態に更新
+        </button>
+      </section>
+
+      <!-- 進捗サマリーカード -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col">
+          <span class="text-xs font-bold text-slate-400">平均進捗率</span>
+          <span id="prog-stat-avg" class="text-2xl font-black text-slate-800 mt-1">0%</span>
+          <span class="text-[10px] text-slate-400 mt-0.5">4スポット合計クリア率</span>
+        </div>
+        <div class="bg-teal-50/60 rounded-2xl p-4 border border-teal-100 shadow-sm flex flex-col">
+          <span class="text-xs font-bold text-teal-700">全課題達成</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="prog-stat-complete" class="text-2xl font-black text-teal-800">0</span>
+            <span class="text-xs font-bold text-teal-600">/ <span id="prog-stat-total">0</span> 班</span>
+          </div>
+          <span class="text-[10px] text-teal-600 mt-0.5">全スポットクリア完了</span>
+        </div>
+        <div class="bg-amber-50/60 rounded-2xl p-4 border border-amber-100 shadow-sm flex flex-col">
+          <span class="text-xs font-bold text-amber-800">進行中</span>
+          <span id="prog-stat-in-progress" class="text-2xl font-black text-amber-900 mt-1">0 班</span>
+          <span class="text-[10px] text-amber-700 mt-0.5">課題攻略中</span>
+        </div>
+        <div class="bg-slate-100/60 rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col">
+          <span class="text-xs font-bold text-slate-500">未開始</span>
+          <span id="prog-stat-unstarted" class="text-2xl font-black text-slate-700 mt-1">0 班</span>
+          <span class="text-[10px] text-slate-400 mt-0.5">チェックイン未記録</span>
+        </div>
+      </div>
+
+      <!-- 班別進捗リスト -->
+      <div class="space-y-3">
+        <h2 class="font-bold text-base text-slate-900 flex items-center gap-2">
+          <i data-lucide="check-square" class="text-teal-600" style="width:20px;height:20px"></i>
+          各班のスポット達成・課題提出状況（班長・班員表示対応）
+        </h2>
+        <div id="progress-groups-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="col-span-full text-center text-xs text-slate-400 py-12 bg-white rounded-2xl border border-slate-200">
+            データを読み込んでいます...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== セクション: 連絡チャット ========== -->
+    <div id="section-chat" class="hidden space-y-4">
+      <section class="pt-2 px-1 flex flex-col">
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">連絡管理</h1>
+          <span class="bg-teal-50 text-teal-700 text-xs px-3 py-1 rounded-full font-bold">生徒チャット・一斉配信</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">班ごとのチャットを確認・返信、全班一斉送信も可能です</p>
+      </section>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex gap-3">
+        <select id="chatClassSelect" onchange="onChatClassChange()" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs md:text-sm font-bold text-slate-700 focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+          <option value="">-- クラスを選択 --</option>
+        </select>
+        <select id="chatGroupSelect" onchange="loadTeacherChatSection()" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs md:text-sm font-bold text-teal-700 focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+          <option value="all">📢 全班一斉</option>
+        </select>
+      </div>
+
+      <div id="teacherChatBox" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 overflow-y-auto" style="min-height:380px;max-height:500px;">
+        <div class="text-center text-xs text-slate-400 py-10">クラス・班を選択してください。</div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex gap-3">
+        <input type="text" id="teacherChatInput" placeholder="先生からメッセージを入力..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+        <button onclick="sendTeacherChatMessage()" class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-sm shadow-sm transition active:scale-95">送信</button>
+      </div>
+    </div>
+
+    <!-- ========== セクション: 班管理 ========== -->
+    <div id="section-hankan" class="hidden space-y-4">
+      <section class="pt-2 px-1 flex flex-col">
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">班管理</h1>
+          <span class="bg-teal-50 text-teal-700 text-xs px-3 py-1 rounded-full font-bold">班編成・名簿管理</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">クラス別班編成および各班の班長・班員名簿を管理します</p>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow-sm border border-teal-500/20 overflow-hidden">
+        <button id="hk-class-toggle-btn" onclick="hkToggleClassDropdown()" class="w-full p-4 flex items-center justify-between bg-white hover:bg-slate-50 transition-colors text-left">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
+              <span class="material-symbols-outlined text-[22px]">school</span>
+            </div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span id="hk-current-class-title" class="font-bold text-lg text-slate-900">読み込み中...</span>
+                <span class="bg-teal-50 text-teal-700 text-xs px-2.5 py-0.5 rounded-full font-bold">選択中</span>
+              </div>
+              <span id="hk-current-class-subtitle" class="text-xs text-slate-500">データ取得中...</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 text-teal-600 font-bold text-xs">
+            <span>クラス切替</span>
+            <span id="hk-class-toggle-icon" class="material-symbols-outlined text-[20px] transition-transform duration-300">expand_more</span>
+          </div>
+        </button>
+        <div id="hk-class-dropdown-list" class="max-h-0 opacity-0 pointer-events-none transition-all duration-300 overflow-hidden divide-y divide-slate-100 bg-slate-50/50"></div>
+      </section>
+
+      <section class="flex flex-col gap-2 pt-1">
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-teal-600 text-[20px]">group</span>
+            <span class="font-bold text-sm text-slate-800">班セレクター</span>
+            <span id="hk-roster-count-summary" class="text-xs text-slate-500">（全0班）</span>
+          </div>
+          <span id="hk-active-team-indicator" class="text-xs font-bold text-teal-600">1班 表示中</span>
+        </div>
+        <div id="hk-team-selector-tabs" class="flex items-center gap-2 overflow-x-auto pb-1 px-1"></div>
+      </section>
+
+      <section id="hk-team-detail-section" class="bg-white rounded-2xl p-5 shadow-sm border border-teal-500/20 flex flex-col gap-4">
+        <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <span id="hk-selected-team-num" class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-sm">1</span>
+              <h3 id="hk-selected-team-title" class="text-xl font-bold text-slate-900 tracking-tight">-- 1班</h3>
+            </div>
+            <div class="flex items-center gap-1 text-xs text-slate-500">
+              <span class="material-symbols-outlined text-[16px] text-teal-600">edit_note</span>
+              <span>編集ボタンから班長・班員を登録できます</span>
+            </div>
+          </div>
+          <button onclick="hkOpenEditModal()" class="flex items-center gap-1 px-4 py-2 rounded-xl bg-teal-50 text-teal-600 font-bold text-xs hover:bg-teal-100 transition-all border border-teal-500/30">
+            <span class="material-symbols-outlined text-[18px]">edit</span><span>編集</span>
+          </button>
+        </div>
+
+        <div class="bg-teal-50/50 rounded-xl p-3.5 flex items-center justify-between border border-teal-500/20">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">
+              <span class="material-symbols-outlined text-[22px]">person</span>
+            </div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="bg-teal-600 text-white text-xs font-bold px-2 py-0.5 rounded">班長</span>
+                <span id="hk-leader-name" class="font-bold text-slate-900 text-base">未登録</span>
+              </div>
+              <span class="text-xs text-slate-500 mt-0.5">安全確認・通信端末管理担当</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between px-0.5">
+            <span id="hk-roster-title-count" class="text-xs font-bold text-slate-800 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[18px] text-teal-600">badge</span>
+              班員名簿（計 0 名）
+            </span>
+          </div>
+          <div id="hk-members-list-container" class="divide-y divide-slate-100 rounded-xl border border-slate-200/80 overflow-hidden bg-white min-h-[60px]">
+            <div class="p-4 text-center text-xs text-slate-400">班員未登録。右上の「編集」から追加してください。</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========== セクション: 集合場所・日時設定 ========== -->
+    <div id="section-gathering" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-teal-600 animate-ping"></span>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">集合場所・集合日時の設定</h1>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">地図上をクリックしてピンを打つか、施設検索で集合地点を確定できます。設定内容は生徒アプリにリアルタイム同期されます。</p>
+        </div>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <span class="text-xs bg-teal-50 text-teal-800 font-bold px-3 py-1.5 rounded-xl border border-teal-200/60 flex items-center gap-1.5">
+            <i data-lucide="send" class="w-3.5 h-3.5 text-teal-600"></i> 生徒側画面に即時反映モード
+          </span>
+        </div>
+      </div>
+
+      <!-- 集合場所設定（マップ） -->
+      <section class="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+              <i data-lucide="map-pin" class="w-4 h-4 text-teal-600"></i>
+            </div>
+            <div>
+              <h2 class="font-bold text-slate-900 text-base">集合場所の設定 (大阪城エリア)</h2>
+              <p class="text-xs text-slate-400">マップをクリックするとその位置にピンが立ち、集合地点として指定されます</p>
+            </div>
+          </div>
+          <button type="button" onclick="resetToOsakaCastle()" class="text-xs font-bold px-3 py-1.5 rounded-xl border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 transition flex items-center gap-1">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 大阪城 正面へリセット
+          </button>
+        </div>
+
+        <div class="relative w-full h-[360px] md:h-[400px] bg-slate-100 border border-slate-200 rounded-2xl overflow-hidden shadow-inner">
+          <div id="gathering-leaflet-map"></div>
+          <div class="absolute top-3 left-3 right-3 sm:right-auto sm:w-96 z-[20]">
+            <div class="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/90 p-1 flex items-center">
+              <i data-lucide="search" class="w-4 h-4 text-teal-600 ml-3 shrink-0"></i>
+              <input type="text" id="map-search-input" placeholder="場所・スポット名を検索（例: 大阪城 極楽橋）..." class="w-full text-xs font-bold text-slate-700 placeholder-slate-400 border-none bg-transparent focus:ring-0 px-2.5 py-2">
+              <button onclick="handleGatheringSearch()" class="bg-[#0d9488] hover:bg-teal-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition active:scale-95 shrink-0 mr-1">検索</button>
+            </div>
+            <div class="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
+              <button onclick="selectSpotPreset('大阪城 天守閣前広場', 34.6873, 135.5262)" class="text-[11px] font-bold bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full shadow-xs hover:bg-teal-50 hover:text-teal-700 transition shrink-0 flex items-center gap-1">
+                <i data-lucide="landmark" class="w-3 h-3 text-teal-600"></i> 天守閣前広場
+              </button>
+              <button onclick="selectSpotPreset('大阪城 大手門（集合地点A）', 34.6853, 135.5208)" class="text-[11px] font-bold bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full shadow-xs hover:bg-teal-50 hover:text-teal-700 transition shrink-0 flex items-center gap-1">
+                <i data-lucide="door-open" class="w-3 h-3 text-teal-600"></i> 大手門
+              </button>
+              <button onclick="selectSpotPreset('大阪城 極楽橋（北門）', 34.6901, 135.5264)" class="text-[11px] font-bold bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 px-2.5 py-1 rounded-full shadow-xs hover:bg-teal-50 hover:text-teal-700 transition shrink-0 flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3 text-teal-600"></i> 極楽橋
+              </button>
+            </div>
+          </div>
+          <button type="button" onclick="centerPinLocation()" title="ピンの位置へ移動" class="absolute top-3 right-3 z-[20] bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl p-2.5 shadow-md transition flex items-center justify-center active:scale-95">
+            <i data-lucide="crosshair" class="w-4 h-4 text-teal-700"></i>
+          </button>
+          <div class="absolute bottom-3 left-3 right-3 z-[20] bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-200 text-xs flex items-center justify-between shadow-md">
+            <div class="flex items-center gap-2 text-slate-700 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+              <span>地図上の任意の位置をクリックして集合ピンを移動できます</span>
+            </div>
+            <span class="text-teal-700 font-bold text-[11px] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">GPSピン同期連動中</span>
+          </div>
+        </div>
+
+        <div class="bg-teal-50/60 border border-teal-200/70 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md shrink-0">
+              <i data-lucide="map-pin" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">指定集合場所</span>
+                <span id="pin-coords-text" class="text-[11px] text-slate-400 font-mono">緯度: 34.6873, 経度: 135.5262</span>
+              </div>
+              <h3 id="spot-name-display" class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-0.5">大阪城（天守閣前広場）</h3>
+              <p id="spot-subtext" class="text-xs text-teal-800 font-medium mt-0.5">集合目安：大阪城本丸正面（全クラス・全班が合流可能な広場）</p>
+            </div>
+          </div>
+          <button onclick="editCustomSpotName()" class="px-3 py-1.5 bg-white border border-teal-300 text-teal-800 font-bold text-xs rounded-xl hover:bg-teal-50 transition shadow-xs flex items-center gap-1">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> 場所名を変更
+          </button>
+        </div>
+      </section>
+
+      <!-- 日時設定カード群 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section class="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center"><i data-lucide="calendar" class="w-4 h-4 text-teal-600"></i></div>
+                <h2 class="font-bold text-slate-900 text-base">集合日時の設定</h2>
+              </div>
+              <span class="text-[11px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">実施予定日</span>
+            </div>
+            <div class="mt-4 p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-teal-50/40 border border-slate-200 flex items-center justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-500">フィールドワーク実施日</span>
+                <div class="text-2xl font-black text-slate-900 tracking-tight mt-0.5 flex items-baseline gap-2">
+                  <span id="date-display-text">2026年9月18日</span>
+                  <span class="text-sm font-bold text-teal-700">(金曜日)</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">天候予備日：2026年9月25日(金)</p>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-white border border-teal-200/60 shadow-xs flex flex-col items-center justify-center text-teal-800">
+                <span class="text-[9px] font-extrabold uppercase tracking-wider text-teal-600">9月</span>
+                <span class="text-lg font-black leading-none">18</span>
+              </div>
+            </div>
+            <div class="mt-4 space-y-2">
+              <label class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>カレンダーから日付を変更</span>
+                <span class="text-[10px] text-teal-600 font-semibold cursor-pointer" onclick="resetToTargetDate()">2026年9月18日に戻す</span>
+              </label>
+              <input type="date" id="date-picker-input" value="2026-09-18" onchange="onDateInputChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none transition">
+            </div>
+          </div>
+          <div class="pt-2 border-t border-slate-100">
+            <span class="text-[11px] font-bold text-slate-400 block mb-2">クイック日程切り替え</span>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="setDateValue('2026-09-18', '2026年9月18日', '(金)')" class="py-2 text-xs font-bold rounded-xl border border-teal-500 bg-teal-50 text-teal-800 shadow-xs">本番 9/18(金)</button>
+              <button onclick="setDateValue('2026-09-19', '2026年9月19日', '(土)')" class="py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">予備 9/19(土)</button>
+              <button onclick="setDateValue('2026-09-25', '2026年9月25日', '(金)')" class="py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">延期 9/25(金)</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center"><i data-lucide="clock" class="w-4 h-4 text-teal-600"></i></div>
+              <h2 class="font-bold text-slate-900 text-base">集合時間の設定</h2>
+            </div>
+            <span class="text-[11px] bg-rose-50 text-rose-700 border border-rose-200 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <i data-lucide="alert-circle" class="w-3 h-3"></i> 点呼完了時刻
+            </span>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-900 text-white shadow-md flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-0.5">
+                <span>指定完了時刻</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              </div>
+              <div class="flex items-baseline gap-1">
+                <span id="target-time-main-display" class="text-4xl font-black tracking-tight text-white font-mono">17:00</span>
+                <span class="text-xs text-teal-300 font-bold ml-1.5">集合・解散ミーティング</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">※生徒端末にはカウントダウンタイマーとともに通知されます</p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-teal-600/30 border border-teal-400/40 flex items-center justify-center text-teal-300">
+              <i data-lucide="timer" class="w-6 h-6"></i>
+            </div>
+          </div>
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span class="flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-600"></i> 時間クイック選択プリセット</span>
+              <span class="text-[10px] text-slate-400">タップで即時切り替え</span>
+            </div>
+            <div class="flex items-center justify-between gap-1.5 overflow-x-auto pb-1.5 px-0.5">
+              <button onclick="setTimePreset('15:00')" class="flex-1 min-w-[54px] aspect-square rounded-full border border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center justify-center shadow-xs hover:border-teal-400 hover:text-teal-700 transition active:scale-95"><span class="text-[10px] text-slate-400">午後</span><span class="text-xs font-extrabold">15:00</span></button>
+              <button onclick="setTimePreset('16:00')" class="flex-1 min-w-[54px] aspect-square rounded-full border border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center justify-center shadow-xs hover:border-teal-400 hover:text-teal-700 transition active:scale-95"><span class="text-[10px] text-slate-400">午後</span><span class="text-xs font-extrabold">16:00</span></button>
+              <button onclick="setTimePreset('16:30')" class="flex-1 min-w-[54px] aspect-square rounded-full border border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center justify-center shadow-xs hover:border-teal-400 hover:text-teal-700 transition active:scale-95"><span class="text-[10px] text-slate-400">午後</span><span class="text-xs font-extrabold">16:30</span></button>
+              <button onclick="setTimePreset('17:00')" class="flex-1 min-w-[54px] aspect-square rounded-full border-2 border-teal-600 bg-teal-50 text-teal-800 font-black text-xs flex flex-col items-center justify-center shadow-md scale-105 transition active:scale-95"><span class="text-[9px] text-teal-600 font-bold">推奨</span><span class="text-xs font-black text-teal-700">17:00</span></button>
+              <button onclick="setTimePreset('17:30')" class="flex-1 min-w-[54px] aspect-square rounded-full border border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center justify-center shadow-xs hover:border-teal-400 hover:text-teal-700 transition active:scale-95"><span class="text-[10px] text-slate-400">午後</span><span class="text-xs font-extrabold">17:30</span></button>
+              <button onclick="setTimePreset('18:00')" class="flex-1 min-w-[54px] aspect-square rounded-full border border-slate-200 bg-white text-slate-700 font-bold text-xs flex flex-col items-center justify-center shadow-xs hover:border-teal-400 hover:text-teal-700 transition active:scale-95"><span class="text-[10px] text-slate-400">夕方</span><span class="text-xs font-extrabold">18:00</span></button>
+            </div>
+          </div>
+          <div class="pt-2 border-t border-slate-100 space-y-2">
+            <div class="flex items-center justify-between text-xs text-slate-600 font-semibold">
+              <span>時刻の変更 (分単位)</span>
+              <span class="font-mono text-xs font-bold text-teal-700" id="minute-counter-badge">17時 00分</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <span class="text-xs font-bold text-slate-500">時:</span>
+                <select id="time-hour-select" onchange="onManualTimeSelectChange()" class="w-full bg-transparent text-sm font-bold text-slate-800 border-none focus:ring-0 p-0">
+                  <option value="15">15時</option><option value="16">16時</option><option value="17" selected>17時</option><option value="18">18時</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <span class="text-xs font-bold text-slate-500">分:</span>
+                <select id="time-minute-select" onchange="onManualTimeSelectChange()" class="w-full bg-transparent text-sm font-bold text-slate-800 border-none focus:ring-0 p-0">
+                  <option value="00" selected>00分</option><option value="15">15分</option><option value="30">30分</option><option value="45">45分</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-teal-500/30 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <h3 class="font-bold text-slate-900 text-base">生徒端末への送信プレビュー確認</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">以下の設定内容で全学年・全クラス（全班の生徒アプリ）へ通知・マップ更新が行われます。</p>
+          </div>
+          <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-bold">配信対象: 全3クラス (計18班)</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+            <span class="text-[11px] font-bold text-slate-400 block mb-0.5">集合指定地</span>
+            <span id="confirm-spot" class="text-sm font-extrabold text-slate-900 truncate block">大阪城（天守閣前広場）</span>
+          </div>
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+            <span class="text-[11px] font-bold text-slate-400 block mb-0.5">集合日</span>
+            <span id="confirm-date" class="text-sm font-extrabold text-slate-900 block">2026年9月18日(金)</span>
+          </div>
+          <div class="bg-teal-50/70 p-3.5 rounded-2xl border border-teal-200/80">
+            <span class="text-[11px] font-bold text-teal-800 block mb-0.5">集合時刻</span>
+            <span id="confirm-time" class="text-lg font-black text-teal-900 font-mono block">17:00</span>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+          <button type="button" onclick="broadcastGatheringSetting()" class="w-full sm:flex-1 py-4 bg-[#0d9488] hover:bg-teal-700 text-white font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2">
+            <i data-lucide="radio" class="w-5 h-5"></i>
+            <span>この内容で集合場所・時間を生徒全員に配信・登録する</span>
+          </button>
+          <button type="button" onclick="saveDraftOnly()" class="w-full sm:w-auto px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-2xl transition">下書き保存</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== ボトムナビゲーション ===== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 shadow-lg">
+    <div class="max-w-2xl mx-auto grid grid-cols-4 text-center">
+      <button id="nav-map" onclick="showSection('map')" class="flex flex-col items-center justify-center text-teal-700 font-bold text-xs py-1">
+        <div class="w-10 h-7 rounded-full bg-teal-50 flex items-center justify-center mb-1">
+          <i data-lucide="map" class="w-5 h-5 text-teal-700"></i>
+        </div>
+        <span>マップ</span>
+      </button>
+      <button id="nav-progress" onclick="showSection('progress')" class="flex flex-col items-center justify-center text-slate-400 font-medium text-xs py-1 transition">
+        <div class="w-10 h-7 flex items-center justify-center mb-1">
+          <i data-lucide="check-square" class="w-5 h-5"></i>
+        </div>
+        <span>進捗管理</span>
+      </button>
+      <button id="nav-contact" onclick="showSection('chat')" class="flex flex-col items-center justify-center text-slate-400 font-medium text-xs py-1 transition relative">
+        <div class="w-10 h-7 flex items-center justify-center mb-1 relative">
+          <i data-lucide="megaphone" class="w-5 h-5"></i>
+        </div>
+        <span>連絡</span>
+      </button>
+      <button id="nav-hankan" onclick="showSection('hankan')" class="flex flex-col items-center justify-center text-slate-400 font-medium text-xs py-1 transition">
+        <div class="w-10 h-7 flex items-center justify-center mb-1">
+          <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+        </div>
+        <span>班管理</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== 班管理 編集モーダル ===== -->
+  <div id="team-edit-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex flex-col justify-end transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="team-edit-container" class="w-full max-w-2xl mx-auto max-h-[85vh] bg-white rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 translate-y-full overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[22px]">edit_note</span>
+          </div>
+          <div>
+            <h2 id="hk-edit-modal-title" class="font-bold text-base text-slate-900">班編成・メンバー編集</h2>
+            <p class="text-xs text-slate-500">出席番号・氏名・役割の変更ができます</p>
+          </div>
+        </div>
+        <button onclick="hkCloseEditModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-bold text-slate-800">班員名簿編集</span>
+          <button onclick="hkAddNewMemberRow()" type="button" class="text-xs font-bold text-teal-600 flex items-center gap-1 hover:underline">
+            <span class="material-symbols-outlined text-[16px]">person_add</span>追加
+          </button>
+        </div>
+        <div id="hk-editable-members-list" class="space-y-2.5"></div>
+        <button type="button" onclick="hkSaveTeamEdit()" class="w-full py-3.5 rounded-xl bg-teal-600 text-white font-bold text-sm shadow-md hover:bg-teal-700 transition-all flex items-center justify-center gap-1.5 mt-4">
+          <span class="material-symbols-outlined text-[18px]">check_circle</span>
+          <span>変更内容を保存する</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 班詳細・メモ・問題文編集・スポット別タブ モーダル ===== -->
+  <div id="group-detail-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex flex-col justify-end md:justify-center items-center transition-opacity duration-300 opacity-0 pointer-events-none p-0 md:p-4">
+    <div id="group-detail-container" class="w-full max-w-2xl max-h-[90vh] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col transform transition-transform duration-300 translate-y-full md:translate-y-0 overflow-hidden">
+
+      <!-- モーダルヘッダー -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="modal-group-title" class="font-extrabold text-lg text-slate-900">1組 1班 - 詳細確認</h2>
+              <span id="modal-task-status-badge" class="px-2 py-0.5 rounded-full text-[11px] font-extrabold">未判定</span>
+            </div>
+            <p id="modal-group-members" class="text-xs text-slate-500">メンバー: ---</p>
+          </div>
+        </div>
+        <button onclick="closeGroupDetailModal()" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- スポット切替タブ -->
+      <div class="flex bg-slate-100 p-1.5 gap-1 border-b border-slate-200 overflow-x-auto">
+        <button type="button" id="spot-tab-0" onclick="switchSpotTab(0)" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition bg-white text-teal-700 shadow-xs whitespace-nowrap">
+          🏯 大阪城
+        </button>
+        <button type="button" id="spot-tab-1" onclick="switchSpotTab(1)" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 whitespace-nowrap">
+          ⛩️ 難波神社
+        </button>
+        <button type="button" id="spot-tab-2" onclick="switchSpotTab(2)" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 whitespace-nowrap">
+          🏛️ 適塾
+        </button>
+        <button type="button" id="spot-tab-3" onclick="switchSpotTab(3)" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 whitespace-nowrap">
+          🌉 道頓堀
+        </button>
+      </div>
+
+      <!-- モーダルコンテンツ -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1">
+
+        <!-- 提出写真エリア -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 id="modal-spot-photo-title" class="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <i data-lucide="image" class="w-4 h-4 text-teal-600"></i>
+              提出写真 (大阪城)
+            </h3>
+            <div class="flex items-center gap-2">
+              <button id="modal-photo-download-btn" onclick="downloadSubmittedPhotos(event)" class="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-bold hover:bg-blue-100 transition">
+                <i data-lucide="download" class="w-3 h-3"></i>
+                ダウンロード
+              </button>
+              <span id="modal-photo-status-indicator" class="text-[10px] bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-md font-bold">提出済み</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video flex flex-col items-center justify-center">
+              <img id="modal-photo-1" src="" alt="提出写真1" class="w-full h-full object-cover">
+              <div id="photo-placeholder-1" class="absolute inset-0 flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-bold hidden">未提出の状態です</div>
+              <span id="photo-label-1" class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-xs">大阪城 天守閣</span>
+            </div>
+            <div class="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video flex flex-col items-center justify-center">
+              <img id="modal-photo-2" src="" alt="提出写真2" class="w-full h-full object-cover">
+              <div id="photo-placeholder-2" class="absolute inset-0 flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-bold hidden">未提出の状態です</div>
+              <span id="photo-label-2" class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-xs">大阪城 石垣</span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <label class="block text-[11px] font-bold text-slate-650">🛠️ デバッグ：現在のスポットの写真 提出/未提出 切り替え</label>
+            <div class="flex gap-2">
+              <button type="button" onclick="debugSetPhotoStatus('submitted')" class="flex-1 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg transition shadow-2xs">写真を提出済みにする</button>
+              <button type="button" onclick="debugSetPhotoStatus('unsubmitted')" class="flex-1 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition shadow-2xs">未提出にする</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- メモエリア -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4 text-teal-600"></i>
+              <span id="modal-spot-memo-heading">大阪城のフィールドメモ</span>
+            </h3>
+            <span class="text-[11px] text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md font-medium">★ 探究視点ポイント獲得</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">記録担当者:</label>
+              <input type="text" id="memo-author" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-slate-500 font-bold mb-1">ハッシュタグ:</label>
+              <input type="text" id="memo-tags" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-500 font-bold mb-1">送られてきたメモ内容（編集可）:</label>
+            <textarea id="memo-content" rows="3" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 leading-relaxed focus:ring-2 focus:ring-teal-500 focus:outline-none"></textarea>
+          </div>
+        </div>
+
+        <!-- 問題文・解答の編集エリア -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-teal-600"></i>
+              スポット問題文・回答・正誤状態の編集
+            </h3>
+            <button type="button" onclick="addModalQuestionRow()" class="text-xs font-bold bg-teal-50 text-teal-700 px-2.5 py-1 rounded-lg border border-teal-200 hover:bg-teal-100 transition flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> 問題を追加
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500">出題する<strong class="text-teal-700">「問題文」</strong>や<strong class="text-teal-700">「正解の回答」</strong>を直接編集でき、右側のボタンで正誤状態を切り替えられます。</p>
+
+          <div id="modal-questions-list" class="space-y-3"></div>
+        </div>
+
+        <!-- スポット訪問クリア状況切替 -->
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-xs text-slate-700">スポット訪問・クリア状況の変更</h3>
+            <span id="spot-clear-status-badge" class="text-[10px] px-2 py-0.5 rounded font-bold bg-teal-100 text-teal-800">クリア済み</span>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" onclick="debugSetSpotClear(true)" class="flex-1 py-1.5 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-700 transition">このスポットをクリア済みにする</button>
+            <button type="button" onclick="debugSetSpotClear(false)" class="flex-1 py-1.5 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 transition">未訪問・未クリアにする</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- モーダル フッター -->
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <button type="button" onclick="closeGroupDetailModal()" class="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">
+          キャンセル
+        </button>
+        <button type="button" onclick="saveGroupDetailData()" class="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>編集・評価内容を保存</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="text-center text-xs text-slate-400 py-4 border-t border-slate-200 bg-white">
+    © 2026 Q-LINK Fieldwork Quest System
+  </footer>
+
+  <!-- ===== デバッグパネル ===== -->
+  <!-- バグアイコンボタン（固定・右下） -->
+  <button id="debug-toggle-btn" onclick="toggleDebugPanel()" title="デバッグパネルを開く"
+    class="fixed bottom-20 right-4 z-50 w-12 h-12 bg-slate-800 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-slate-700 transition active:scale-95 border-2 border-slate-600">
+    <i data-lucide="bug" style="width:22px;height:22px"></i>
+  </button>
+
+  <!-- デバッグパネル本体 -->
+  <div id="debug-panel" class="hidden fixed bottom-36 right-4 z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 w-80 flex flex-col overflow-hidden" style="max-height:70vh;">
+    <!-- ヘッダー -->
+    <div class="px-4 py-3 bg-slate-800 text-white flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2 text-sm font-bold">
+        <i data-lucide="bug" style="width:16px;height:16px"></i>
+        デバッグパネル
+      </div>
+      <button onclick="toggleDebugPanel()" class="text-slate-400 hover:text-white transition">
+        <i data-lucide="x" style="width:16px;height:16px"></i>
+      </button>
+    </div>
+
+    <!-- タブボタン -->
+    <div class="flex border-b border-slate-200 bg-slate-50 flex-shrink-0">
+      <button onclick="showDebugTab('gps')" id="debug-tab-gps"
+        class="flex-1 py-2 text-xs font-bold text-teal-700 border-b-2 border-teal-600 transition">GPS</button>
+      <button onclick="showDebugTab('achievement')" id="debug-tab-achievement"
+        class="flex-1 py-2 text-xs font-bold text-slate-500 border-b-2 border-transparent transition">達成度</button>
+      <button onclick="showDebugTab('chat')" id="debug-tab-chat"
+        class="flex-1 py-2 text-xs font-bold text-slate-500 border-b-2 border-transparent transition">チャット</button>
+    </div>
+
+    <!-- タブコンテンツ -->
+    <div class="overflow-y-auto flex-1 p-4">
+
+      <!-- ======= GPSタブ ======= -->
+      <div id="debug-content-gps" class="space-y-4">
+
+        <!-- 教師GPS -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-[10px] font-black">教</span>
+            教師の現在地を移動
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <button onclick="moveGPS('teacher','up')"
+              class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-teal-50 hover:text-teal-700 font-bold flex items-center justify-center transition">↑</button>
+            <div class="flex gap-1">
+              <button onclick="moveGPS('teacher','left')"
+                class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-teal-50 hover:text-teal-700 font-bold flex items-center justify-center transition">←</button>
+              <div class="w-10 h-8 bg-teal-600 rounded-lg text-white flex items-center justify-center text-[10px] font-black">教</div>
+              <button onclick="moveGPS('teacher','right')"
+                class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-teal-50 hover:text-teal-700 font-bold flex items-center justify-center transition">→</button>
+            </div>
+            <button onclick="moveGPS('teacher','down')"
+              class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-teal-50 hover:text-teal-700 font-bold flex items-center justify-center transition">↓</button>
+          </div>
+          <div id="debug-teacher-coords" class="text-[10px] text-slate-400 text-center font-mono">-- 未設定 --</div>
+        </div>
+
+        <hr class="border-slate-100">
+
+        <!-- 生徒GPS -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-slate-600 text-white flex items-center justify-center text-[10px] font-black">生</span>
+            生徒（班）の現在地を移動
+          </div>
+          <select id="debug-student-group" onchange="onDebugStudentGroupChange()"
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 font-medium">
+            <option value="">-- 班を選択 --</option>
+          </select>
+          <div class="flex flex-col items-center gap-1">
+            <button onclick="moveGPS('student','up')"
+              class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-slate-200 font-bold flex items-center justify-center transition">↑</button>
+            <div class="flex gap-1">
+              <button onclick="moveGPS('student','left')"
+                class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-slate-200 font-bold flex items-center justify-center transition">←</button>
+              <div id="debug-student-center" class="w-10 h-8 bg-slate-600 rounded-lg text-white flex items-center justify-center text-[10px] font-black">生</div>
+              <button onclick="moveGPS('student','right')"
+                class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-slate-200 font-bold flex items-center justify-center transition">→</button>
+            </div>
+            <button onclick="moveGPS('student','down')"
+              class="w-10 h-8 bg-slate-100 rounded-lg text-slate-700 hover:bg-slate-200 font-bold flex items-center justify-center transition">↓</button>
+          </div>
+          <div id="debug-student-coords" class="text-[10px] text-slate-400 text-center font-mono">-- 未設定 --</div>
+        </div>
+      </div>
+
+      <!-- ======= 達成度タブ ======= -->
+      <div id="debug-content-achievement" class="hidden space-y-4">
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700">対象班を選択</label>
+          <select id="debug-achieve-group" onchange="onDebugAchieveGroupChange()"
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 font-medium">
+            <option value="">-- 班を選択 --</option>
+          </select>
+        </div>
+
+        <!-- 達成度レベル -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700">達成度レベル（0〜4）</label>
+          <div class="flex gap-1.5">
+            <button onclick="setAchievementLevel(0)" id="debug-level-0"
+              class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition">0</button>
+            <button onclick="setAchievementLevel(1)" id="debug-level-1"
+              class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition">1</button>
+            <button onclick="setAchievementLevel(2)" id="debug-level-2"
+              class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition">2</button>
+            <button onclick="setAchievementLevel(3)" id="debug-level-3"
+              class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition">3</button>
+            <button onclick="setAchievementLevel(4)" id="debug-level-4"
+              class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition">4</button>
+          </div>
+          <div id="debug-level-display" class="text-[10px] text-slate-400 text-center">レベル: --</div>
+        </div>
+
+        <!-- 問題1 -->
+        <div class="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
+          <div class="text-xs font-bold text-slate-600">問題 1</div>
+          <div class="flex gap-1">
+            <button onclick="setQuestionAnswer(1,'a')" id="debug-q1-a" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">A</button>
+            <button onclick="setQuestionAnswer(1,'b')" id="debug-q1-b" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">B</button>
+            <button onclick="setQuestionAnswer(1,'c')" id="debug-q1-c" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">C</button>
+            <button onclick="setQuestionAnswer(1,'d')" id="debug-q1-d" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">D</button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="setQuestionResult(1,true)" id="debug-q1-correct"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">○ 正解</button>
+            <button onclick="setQuestionResult(1,false)" id="debug-q1-incorrect"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition">✕ 不正解</button>
+          </div>
+        </div>
+
+        <!-- 問題2 -->
+        <div class="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
+          <div class="text-xs font-bold text-slate-600">問題 2</div>
+          <div class="flex gap-1">
+            <button onclick="setQuestionAnswer(2,'a')" id="debug-q2-a" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">A</button>
+            <button onclick="setQuestionAnswer(2,'b')" id="debug-q2-b" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">B</button>
+            <button onclick="setQuestionAnswer(2,'c')" id="debug-q2-c" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">C</button>
+            <button onclick="setQuestionAnswer(2,'d')" id="debug-q2-d" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">D</button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="setQuestionResult(2,true)" id="debug-q2-correct"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">○ 正解</button>
+            <button onclick="setQuestionResult(2,false)" id="debug-q2-incorrect"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition">✕ 不正解</button>
+          </div>
+        </div>
+
+        <!-- 問題3 -->
+        <div class="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
+          <div class="text-xs font-bold text-slate-600">問題 3</div>
+          <div class="flex gap-1">
+            <button onclick="setQuestionAnswer(3,'a')" id="debug-q3-a" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">A</button>
+            <button onclick="setQuestionAnswer(3,'b')" id="debug-q3-b" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">B</button>
+            <button onclick="setQuestionAnswer(3,'c')" id="debug-q3-c" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">C</button>
+            <button onclick="setQuestionAnswer(3,'d')" id="debug-q3-d" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">D</button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="setQuestionResult(3,true)" id="debug-q3-correct"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">○ 正解</button>
+            <button onclick="setQuestionResult(3,false)" id="debug-q3-incorrect"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition">✕ 不正解</button>
+          </div>
+        </div>
+
+        <!-- 問題4 -->
+        <div class="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
+          <div class="text-xs font-bold text-slate-600">問題 4</div>
+          <div class="flex gap-1">
+            <button onclick="setQuestionAnswer(4,'a')" id="debug-q4-a" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">A</button>
+            <button onclick="setQuestionAnswer(4,'b')" id="debug-q4-b" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">B</button>
+            <button onclick="setQuestionAnswer(4,'c')" id="debug-q4-c" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">C</button>
+            <button onclick="setQuestionAnswer(4,'d')" id="debug-q4-d" class="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition">D</button>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="setQuestionResult(4,true)" id="debug-q4-correct"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">○ 正解</button>
+            <button onclick="setQuestionResult(4,false)" id="debug-q4-incorrect"
+              class="flex-1 py-1 text-xs font-bold rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition">✕ 不正解</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= チャット返信タブ ======= -->
+      <div id="debug-content-chat" class="hidden space-y-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-2.5 text-[11px] text-blue-800 font-medium">
+          生徒になりきって返信メッセージを送信します
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700">クラス</label>
+          <select id="debug-chat-class" onchange="onDebugChatClassChange()"
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 font-medium">
+            <option value="">-- クラスを選択 --</option>
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700">班</label>
+          <select id="debug-chat-group"
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 font-medium">
+            <option value="">-- 班を選択 --</option>
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700">送信者名（生徒）</label>
+          <input type="text" id="debug-chat-sender" placeholder="例: 山田太郎"
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50">
+        </div>
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-700">メッセージ</label>
+          <textarea id="debug-chat-text" rows="3"
+            placeholder="返信内容を入力..."
+            class="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 resize-none"></textarea>
+        </div>
+        <button onclick="sendDebugStudentMessage()"
+          class="w-full py-2.5 bg-teal-600 text-white text-xs font-bold rounded-xl hover:bg-teal-700 transition active:scale-95">
+          生徒として送信
+        </button>
+        <div id="debug-chat-status" class="text-[11px] text-center text-slate-400 min-h-[18px]"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== スクリプト ===== -->
+  <script>
+    let currentSchoolData = null;
+    let currentEditingGroupId = null;
+    let currentSpotIndex = 0;
+    let spotModalData = {};
+    let hkActiveTeamKey = null;
+    let currentAccuracyTab = 'grade';
+    let selectedClassIndex = -1; // -1: 全体表示
+    let mapCurrentClass = '全体';
+    
+    // GIS Map & Geofence
+    const GEOFENCE_RADIUS_METERS = 1000;
+    let groupsData = {};
+    let allClassGroups = {};
+    let teacherLatLng = null;
+    let teacherMarker = null;
+    let geofenceCircle = null;
+    const groupStates = {};
+    const groupMarkers = {};
+    const memoMarkers = {}; // 位置情報メモ（memo.csv）のピン管理
+
+    // Leafletマップの初期化
+    const gisMap = L.map('leaflet-map', {
+      zoomControl: true,
+      attributionControl: true,
+      minZoom: 12
+    }).setView([34.6813, 135.5172], 15);
+
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>'
+    }).addTo(gisMap);
+
+    // DOM読み込み後の初期化
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (window.lucide) lucide.createIcons();
+
+      const schoolId = localStorage.getItem('qlink_school_id') || 'school1';
+      const teacherName = localStorage.getItem('qlink_teacher') || '担当教員';
+      
+      const teacherEl = document.getElementById('display-teacher-name');
+      if (teacherEl) teacherEl.textContent = teacherName;
+
+      try {
+        const res = await fetch(`data/kanri/${schoolId}/school.json`);
+        if (!res.ok) throw new Error('学校データが存在しません');
+
+        currentSchoolData = await res.json();
+        setupClassDropdown(currentSchoolData);
+
+        // 初期選択は「全体」
+        await selectClass(-1);
+
+      } catch (err) {
+        console.warn('JSON取得エラー、sinki.csv またはフォールバックデータの確認:', err);
+        loadGroupDataFromCSV();
+      }
+
+      setupGPSWatch();
+      loadShelterData();
+
+      // 位置情報メモ（memo.csv）の取得とマップ表示、以後15秒おきに自動更新
+      loadMemoLocations();
+      setInterval(loadMemoLocations, 15000);
+    });
+
+    // 避難所データ取得
+    async function loadShelterData() {
+      try {
+        const response = await fetch('data/opendata_2015.csv');
+        if (!response.ok) return;
+        const csvText = await response.text();
+        const lines = csvText.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const row = {};
+          headers.forEach((h, idx) => { row[h] = values[idx]; });
+          const name = row['名称'] || row['施設名'] || row['name'] || '避難所';
+          const lat = parseFloat(row['緯度'] || row['lat'] || row['Y']);
+          const lng = parseFloat(row['経度'] || row['lng'] || row['X']);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            L.circleMarker([lat, lng], { radius: 8, fillColor: '#ef4444', color: '#ffffff', weight: 2, fillOpacity: 0.9 })
+              .addTo(gisMap)
+              .bindPopup(`<b>🏫 避難所</b><br>${name}`);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 位置情報メモ（各班の data/kanri/学校ID/クラスID/班ID/memo.csv）を
+    // server.js の /api/memo/location 経由でまとめて取得し、マップにピン表示する
+    async function loadMemoLocations() {
+      const schoolId = localStorage.getItem('qlink_school_id') || 'school1';
+      try {
+        const res = await fetch(`/api/memo/location?school=${encodeURIComponent(schoolId)}`);
+        if (!res.ok) return;
+        const memos = await res.json();
+        if (!Array.isArray(memos)) return;
+
+        const seenIds = new Set();
+
+        memos.forEach(m => {
+          if (typeof m.lat !== 'number' || typeof m.lng !== 'number' || isNaN(m.lat) || isNaN(m.lng)) return;
+          seenIds.add(m.memo_id);
+
+          const classNum = (String(m.class_id).match(/\d+/) || ['?'])[0];
+          const groupNum = (String(m.group_id).match(/\d+/) || ['?'])[0];
+          const popupHtml = `
+            <div style="min-width:170px;">
+              <b>${classNum}組 ${groupNum}班の現在地</b><br>
+              <span style="color:#64748b;font-size:11px;">${m.timestamp}　記入者: ${m.author || '不明'}</span>
+              <div style="margin-top:4px;font-size:12px;color:#0d9488;">${m.content}</div>
+            </div>`;
+
+          if (memoMarkers[m.memo_id]) {
+            memoMarkers[m.memo_id].setLatLng([m.lat, m.lng]);
+            memoMarkers[m.memo_id].setPopupContent(popupHtml);
+          } else {
+            const marker = L.marker([m.lat, m.lng], { icon: createMemoPinIcon() })
+              .addTo(gisMap)
+              .bindPopup(popupHtml);
+            memoMarkers[m.memo_id] = marker;
+          }
+        });
+
+        // サーバー側に存在しなくなったメモのピンはマップから除去
+        Object.keys(memoMarkers).forEach(id => {
+          if (!seenIds.has(id)) {
+            gisMap.removeLayer(memoMarkers[id]);
+            delete memoMarkers[id];
+          }
+        });
+      } catch (e) {
+        console.warn('メモ位置情報の取得に失敗しました:', e);
+      }
+    }
+
+    function createMemoPinIcon() {
+      return L.divIcon({
+        className: '',
+        html: `<div class="memo-pin-marker" style="width:34px;height:34px;"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></div>`,
+        iconSize: [34, 40], iconAnchor: [17, 40], popupAnchor: [0, -36]
+      });
+    }
+
+    // CSVフォールバック読み込み
+    function loadGroupDataFromCSV() {
+      Papa.parse('data/sinki.csv', {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          try {
+            var rawGroups = [];
+            if (results.data[0]) {
+              rawGroups = JSON.parse(results.data[0]['班'] || '[]');
+            }
+
+            allClassGroups = {};
+            rawGroups.forEach(function(g) {
+              var cls = g.cls || '1組';
+              if (!allClassGroups[cls]) allClassGroups[cls] = {};
+              var groupId = String(g.num);
+              allClassGroups[cls][groupId] = {
+                id: groupId,
+                members: (g.members || []).map(function(m) { return m.name; }).filter(Boolean),
+                lat: null, lng: null
+              };
+            });
+
+            var classes = Object.keys(allClassGroups);
+            if (classes.length) {
+              mapCurrentClass = '全体';
+              selectClass(-1);
+            }
+          } catch(e) {}
+        }
+      });
+    }
+
+    // クラス選択ドロップダウン生成
+    function setupClassDropdown(schoolData) {
+      const menu = document.getElementById('class-dropdown-menu');
+      if (!menu) return;
+
+      const grade = schoolData.grade || '';
+      const totalGroups = (schoolData.classes || []).reduce((acc, c) => acc + (c.groupCount || 0), 0);
+
+      let html = `
+        <button type="button" onclick="selectClass(-1)" 
+          class="w-full text-left px-4 py-2.5 text-xs hover:bg-teal-50 hover:text-teal-700 font-bold text-slate-700 transition flex items-center justify-between border-b border-slate-100">
+          <span>全体（全クラス）</span>
+          <span class="text-[10px] bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded-full font-semibold">合計 ${totalGroups}班</span>
+        </button>
+      `;
+
+      html += schoolData.classes.map((c, index) => `
+        <button type="button" onclick="selectClass(${index})" 
+          class="w-full text-left px-4 py-2 text-xs hover:bg-teal-50 hover:text-teal-700 font-bold text-slate-700 transition flex items-center justify-between">
+          <span>${grade}${c.name}</span>
+          <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">${c.groupCount}班</span>
+        </button>
+      `).join('');
+
+      menu.innerHTML = html;
+    }
+
+    // クラス選択処理
+    async function selectClass(index) {
+      selectedClassIndex = index;
+      const grade = (currentSchoolData && currentSchoolData.grade) || '';
+
+      const label = document.getElementById('selected-class-label');
+      const badge = document.getElementById('selected-class-badge');
+
+      if (index === -1) {
+        mapCurrentClass = '全体';
+        if (label) label.textContent = '全体';
+        if (badge) badge.classList.add('hidden');
+
+        const titleEl = document.getElementById('group-status-title');
+        if (titleEl) {
+          titleEl.innerHTML = `
+            <i data-lucide="users" class="text-teal-600" style="width:20px;height:20px"></i>
+            全班ステータス一覧 (全体)
+          `;
+        }
+
+        await renderAllGroups();
+      } else {
+        const selectedClass = currentSchoolData ? currentSchoolData.classes[index] : { name: `${index+1}組`, groupCount: 6 };
+        if (!selectedClass) return;
+
+        const fullClassName = `${grade}${selectedClass.name}`;
+        mapCurrentClass = fullClassName;
+
+        if (label) label.textContent = fullClassName;
+        if (badge) {
+          badge.textContent = `${selectedClass.groupCount}班`;
+          badge.classList.remove('hidden');
+        }
+
+        const titleEl = document.getElementById('group-status-title');
+        if (titleEl) {
+          titleEl.innerHTML = `
+            <i data-lucide="users" class="text-teal-600" style="width:20px;height:20px"></i>
+            全班ステータス一覧 (${fullClassName})
+          `;
+        }
+
+        await renderGroupsForClass(selectedClass.name, selectedClass.groupCount);
+      }
+
+      const menu = document.getElementById('class-dropdown-menu');
+      if (menu) menu.classList.add('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // localStorage から班名簿を読み込む
+    function loadGroupRosterStorage(key) {
+      const saved = localStorage.getItem(`qlink_roster_${key}`);
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+      return { leader: null, members: [] };
+    }
+
+    // 全クラスの班を描画
+    async function renderAllGroups() {
+      const container = document.getElementById('group-list-container');
+      if (!container) return;
+
+      container.innerHTML = '';
+      groupsData = {};
+
+      if (!currentSchoolData || !currentSchoolData.classes) return;
+
+      for (let cIdx = 0; cIdx < currentSchoolData.classes.length; cIdx++) {
+        const cls = currentSchoolData.classes[cIdx];
+
+        for (let g = 1; g <= cls.groupCount; g++) {
+          const globalKey = `${cls.name}_${g}班`;
+          const rosterData = loadGroupRosterStorage(globalKey);
+          const leader = rosterData.leader || '未設定';
+          const members = rosterData.members.length > 0 ? rosterData.members : [];
+
+          groupsData[globalKey] = { id: globalKey, className: cls.name, displayName: `${g}班`, leader, members, lat: null, lng: null };
+          groupStates[globalKey] = true;
+
+          appendGroupCard(globalKey, `${cls.name} ${g}班`, leader, members);
+        }
+      }
+
+      updateSummaryCounts();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // 単一クラスの班カード描画
+    async function renderGroupsForClass(className, groupCount) {
+      const container = document.getElementById('group-list-container');
+      if (!container) return;
+
+      container.innerHTML = '';
+      groupsData = {};
+
+      for (let g = 1; g <= groupCount; g++) {
+        const globalKey = `${className}_${g}班`;
+        const rosterData = loadGroupRosterStorage(globalKey);
+        const leader = rosterData.leader || '未設定';
+        const members = rosterData.members.length > 0 ? rosterData.members : [];
+
+        groupsData[globalKey] = { id: globalKey, className, displayName: `${g}班`, leader, members, lat: null, lng: null };
+        groupStates[globalKey] = true;
+
+        appendGroupCard(globalKey, `${g}班`, leader, members);
+      }
+
+      updateSummaryCounts();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // 班カードHTML生成共通関数
+    function appendGroupCard(key, displayName, leader, members) {
+      const container = document.getElementById('group-list-container');
+      const memberCount = members.length;
+      const memberText = memberCount > 0 ? members.join('、') : 'メンバー未登録';
+
+      const groupCardHTML = `
+        <div id="card-group-${key}" onclick="focusGroup('${key}')" class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center justify-between hover:border-teal-300 transition cursor-pointer">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-slate-700 text-xs flex-shrink-0">
+              ${displayName.replace('班','')}
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-900 whitespace-nowrap">${displayName} (${memberCount}名)</span>
+                <span id="badge-group-${key}" class="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full whitespace-nowrap">位置未取得</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5 truncate">
+                班長: ${leader} | メンバー: ${memberText}
+              </p>
+            </div>
+          </div>
+          <button type="button" id="btn-toggle-${key}" onclick="event.stopPropagation();toggleGroup('${key}')" class="bg-[#0d9488] text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 hover:bg-teal-700 transition flex-shrink-0 ml-2">
+            <i data-lucide="eye" style="width:14px;height:14px"></i>
+            <span>表示中</span>
+          </button>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', groupCardHTML);
+    }
+
+    // GIS マップ上のマーカー管理
+    function createGroupIcon(id, statusClass) {
+      const bg = statusClass === 'warning' ? '#dc2626' : statusClass === 'safe' ? '#0d9488' : '#6b7280';
+      const pulse = statusClass === 'warning'
+        ? '<div style="position:absolute;top:-12px;left:-16px;right:-16px;bottom:-12px;border-radius:50%;background:rgba(239,68,68,0.25);animation:alertPulse 2s cubic-bezier(0.4,0,0.6,1) infinite;pointer-events:none;"></div>'
+        : '';
+      const groupObj = groupsData[id];
+      const label = groupObj ? (groupObj.displayName || `${id}班`) : `${id}班`;
+      const html = `
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;width:80px;">
+          ${pulse}
+          <div style="padding:2px 8px;border-radius:9999px;background:${bg};color:#fff;font-weight:900;font-size:10px;border:1.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.3);white-space:nowrap;text-align:center;position:relative;z-index:1;">${label}${statusClass === 'warning' ? ' ⚠' : ''}</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;margin-top:-4px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);position:relative;z-index:1;">${id}</div>
+        </div>`;
+      return L.divIcon({ html: html, className: '', iconSize: [80, 46], iconAnchor: [40, 32] });
+    }
+
+    function toggleGroup(groupId) {
+      groupStates[groupId] = !groupStates[groupId];
+      updateGroupUI(groupId);
+      updateSummaryCounts();
+    }
+
+    function updateGroupUI(groupId) {
+      const isVisible = groupStates[groupId];
+      const marker = groupMarkers[groupId];
+      const btn = document.getElementById('btn-toggle-' + groupId);
+      const card = document.getElementById('card-group-' + groupId);
+      if (!btn || !card) return;
+
+      const group = groupsData[groupId] || {};
+      const isSafe = group.lat !== null ? checkPointInGeofence(group.lat, group.lng) : null;
+      const statusClass = group.lat !== null ? (isSafe ? 'safe' : 'warning') : 'no-gps';
+
+      if (isVisible) {
+        if (marker && !gisMap.hasLayer(marker)) marker.addTo(gisMap);
+        btn.className = statusClass === 'warning'
+          ? 'bg-rose-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 hover:bg-rose-700 transition flex-shrink-0 ml-2'
+          : 'bg-[#0d9488] text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 hover:bg-teal-700 transition flex-shrink-0 ml-2';
+        btn.innerHTML = '<i data-lucide="eye" style="width:14px;height:14px"></i><span>表示中</span>';
+        card.style.opacity = '1';
+      } else {
+        if (marker && gisMap.hasLayer(marker)) gisMap.removeLayer(marker);
+        btn.className = 'bg-slate-200 text-slate-600 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 hover:bg-slate-300 transition flex-shrink-0 ml-2';
+        btn.innerHTML = '<i data-lucide="eye-off" style="width:14px;height:14px"></i><span>非表示</span>';
+        card.style.opacity = '0.5';
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function setAllGroups(visible) {
+      for (const g in groupStates) { groupStates[g] = visible; updateGroupUI(g); }
+      updateSummaryCounts();
+    }
+
+    function updateSummaryCounts() {
+      let active = 0, alertCount = 0;
+      for (const g in groupStates) {
+        if (groupStates[g]) {
+          active++;
+          const group = groupsData[g] || {};
+          if (group.lat !== null && !checkPointInGeofence(group.lat, group.lng)) alertCount++;
+        }
+      }
+      const elActive = document.getElementById('stat-active-count');
+      const elAlert = document.getElementById('stat-alert-count');
+      const elSafe = document.getElementById('stat-safe-count');
+      if (elActive) elActive.textContent = active;
+      if (elAlert) elAlert.textContent = alertCount;
+      if (elSafe) elSafe.textContent = Math.max(0, active - alertCount);
+    }
+
+    function checkPointInGeofence(lat, lng) {
+      if (!teacherLatLng) return true;
+      const teacherPoint = L.latLng(teacherLatLng[0], teacherLatLng[1]);
+      const studentPoint = L.latLng(lat, lng);
+      return teacherPoint.distanceTo(studentPoint) <= GEOFENCE_RADIUS_METERS;
+    }
+
+    function updateGroupLocation(groupId, lat, lng) {
+      if (!groupsData[groupId]) return;
+      groupsData[groupId].lat = lat;
+      groupsData[groupId].lng = lng;
+
+      const isSafe = checkPointInGeofence(lat, lng);
+      const badge = document.getElementById('badge-group-' + groupId);
+      if (badge) {
+        badge.textContent = isSafe ? 'エリア内' : 'エリア外注意';
+        badge.className = isSafe
+          ? 'text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap'
+          : 'text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap';
+      }
+
+      const statusClass = isSafe ? 'safe' : 'warning';
+      if (!groupMarkers[groupId]) {
+        const marker = L.marker([lat, lng], { icon: createGroupIcon(groupId, statusClass) }).addTo(gisMap);
+        marker.on('click', () => focusGroup(groupId));
+        groupMarkers[groupId] = marker;
+      } else {
+        groupMarkers[groupId].setLatLng([lat, lng]);
+        groupMarkers[groupId].setIcon(createGroupIcon(groupId, statusClass));
+      }
+      groupMarkers[groupId].bindPopup(`<b>${groupsData[groupId].displayName || groupId + '班'}</b><br>メンバー: ${(groupsData[groupId].members || []).join('、')}<br>状態: ${isSafe ? '正常' : '範囲外'}`);
+      updateGroupUI(groupId);
+      updateSummaryCounts();
+    }
+
+    function focusGroup(groupId) {
+      const group = groupsData[groupId];
+      if (group && group.lat !== null && group.lng !== null) {
+        gisMap.setView([group.lat, group.lng], 16, { animate: true });
+        if (groupMarkers[groupId]) groupMarkers[groupId].openPopup();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        alert(`${group ? (group.displayName || groupId + '班') : groupId}の位置情報はまだ取得できていません。`);
+      }
+    }
+
+    // 教員GPS & 現在地ジャンプ処理
+    function setupGPSWatch() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.watchPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const isFirst = (teacherLatLng === null);
+          teacherLatLng = [lat, lng];
+
+          if (!teacherMarker) {
+            teacherMarker = L.marker(teacherLatLng, {
+              icon: L.divIcon({
+                className: '',
+                html: '<div style="background:#0d9488;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);">教</div>',
+                iconSize: [28, 28], iconAnchor: [14, 14]
+              })
+            }).bindPopup('<b>現在地（教員・本部）</b>').addTo(gisMap);
+          } else {
+            teacherMarker.setLatLng(teacherLatLng);
+          }
+
+          if (isFirst) gisMap.setView(teacherLatLng, 15);
+        }, error => {}, { enableHighAccuracy: true });
+      }
+    }
+
+    function centerToTeacherLocation() {
+      if (teacherLatLng) {
+        gisMap.setView(teacherLatLng, 16, { animate: true });
+        if (teacherMarker) teacherMarker.openPopup();
+      } else {
+        alert('現在地（GPS）がまだ取得されていません。');
+      }
+    }
+
+    function toggleDropdown() {
+      const menu = document.getElementById('class-dropdown-menu');
+      const icon = document.getElementById('class-dropdown-icon');
+      if (menu) menu.classList.toggle('hidden');
+      if (icon) icon.classList.toggle('rotate-180');
+    }
+
+    function requestRollCall() {
+      if (confirm('全班に一斉チェックイン（点呼確認）通知を送信しますか？')) {
+        alert('✅ 全班に点呼確認リクエストを送信しました！');
+      }
+    }
+
+    // ========== 課題進捗管理 定数・変数 ==========
+    const ALL_SPOTS = [
+      { id: 'spot_osakajo', name: '大阪城', photo1Url: 'https://images.unsplash.com/photo-1590559899731-a382839e5549?auto=format&fit=crop&w=600&q=80', photo2Url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80' },
+      { id: 'spot_nambajinja', name: '難波神社', photo1Url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=600&q=80', photo2Url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80' },
+      { id: 'spot_tekijuku', name: '適塾', photo1Url: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&w=600&q=80', photo2Url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80' },
+      { id: 'spot_dotonbori', name: '道頓堀', photo1Url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=600&q=80', photo2Url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80' }
+    ];
+
+    const DEFAULT_MEMOS = [
+      { author: '大阪城 記録担当', tags: '#豊臣秀吉 #天守閣 #石垣', content: '豊臣期と徳川期の石垣の違いや、本丸・二の丸の構造について現地で調査を行いました。' },
+      { author: '難波神社 記録担当', tags: '#上町台地 #仁徳天皇 #神社', content: '上町台地の歴史や、都会の真ん中に鎮座する神社の境内環境についてメモをまとめました。' },
+      { author: '適塾 記録担当', tags: '#緒方洪庵 #蘭学 #医学', content: '緒方洪庵が開いた適塾の建物を見学し、当時の医学教育や若き蘭学者たちの生活環境について学びました。' },
+      { author: '道頓堀 記録担当', tags: '#水運文化 #天下の台所 #芝居町', content: '道頓堀川の堀留め跡や歴史案内板を確認し、江戸時代からの水運・商業の歴史を実感しました。' }
+    ];
+
+    const DEFAULT_SPOT_QUESTIONS = [
+      [
+        { id: 'q_oj1', text: 'Q1. 大阪城を最初に築城した歴史的人物は誰ですか？', answer: '豊臣秀吉', status: 'correct' },
+        { id: 'q_oj2', text: 'Q2. 本丸の石垣で最も大きい石の名称は？', answer: '蛸石', status: 'correct' }
+      ],
+      [
+        { id: 'q_nj1', text: 'Q1. 難波神社が位置する上町台地の特徴は？', answer: '高台・微高地', status: 'correct' },
+        { id: 'q_nj2', text: 'Q2. 境内に祀られているご祭神は誰ですか？', answer: '仁徳天皇', status: 'unsubmitted' }
+      ],
+      [
+        { id: 'q_tj1', text: 'Q1. 適塾の創設者である蘭学者は誰ですか？', answer: '緒方洪庵', status: 'correct' },
+        { id: 'q_tj2', text: 'Q2. 塾生たちが勉学に励んだ部屋に残る有名な痕跡は？', answer: '柱の刀傷', status: 'incorrect' }
+      ],
+      [
+        { id: 'q_dt1', text: 'Q1. 道頓堀川が開削された主な目的は何でしょうか？', answer: '水運物流と開発', status: 'correct' },
+        { id: 'q_dt2', text: 'Q2. 戎橋の欄干にデザインされているモチーフは何ですか？', answer: 'お好み焼きのコテ', status: 'incorrect' }
+      ]
+    ];
+
+    let hkTeams = [];
+
+    function hkRebuildTeams() {
+      hkTeams = [];
+      Object.keys(hkAppData).forEach(cls => {
+        const d = hkAppData[cls];
+        const clsNumMatch = cls.match(/(\d+)組/);
+        const clsNum = clsNumMatch ? clsNumMatch[1] : '1';
+        Object.keys(d.teams).sort((a, b) => Number(a) - Number(b)).forEach(teamNum => {
+          const members = d.teams[teamNum];
+          const leader = members.find(m => m.isLeader);
+          const teamId = cls + '_' + teamNum;
+          const stored = JSON.parse(localStorage.getItem('qlink_team_progress_' + teamId) || 'null');
+          hkTeams.push({
+            id: teamId,
+            class: clsNum,
+            name: teamNum + '班',
+            leader: leader ? leader.name : '未設定',
+            members: members.map(m => m.name),
+            spots: stored || null
+          });
+        });
+      });
+    }
+
+    function hkSaveToStorage() {
+      hkTeams.forEach(t => {
+        if (t.spots) {
+          localStorage.setItem('qlink_team_progress_' + t.id, JSON.stringify(t.spots));
+        }
+      });
+    }
+
+    // ========== セクション切替 ==========
+    let hkInitialized = false;
+
+    // 集合設定マップ変数
+    const DEFAULT_OSAKA_CASTLE = { lat: 34.6873, lng: 135.5262, name: '大阪城（天守閣前広場）', sub: '集合目安：大阪城本丸正面' };
+    let gatheringMap = null;
+    let currentGatheringMarker = null;
+    let currentSpotName = DEFAULT_OSAKA_CASTLE.name;
+    let currentSpotSub = DEFAULT_OSAKA_CASTLE.sub;
+    let currentTargetDate = '2026-09-18';
+    let currentTargetDateDisplay = '2026年9月18日';
+    let currentTargetTime = '17:00';
+
+    function showSection(name) {
+      document.getElementById('section-map').classList.toggle('hidden', name !== 'map');
+      document.getElementById('section-progress').classList.toggle('hidden', name !== 'progress');
+      document.getElementById('section-chat').classList.toggle('hidden', name !== 'chat');
+      document.getElementById('section-hankan').classList.toggle('hidden', name !== 'hankan');
+      document.getElementById('section-gathering').classList.toggle('hidden', name !== 'gathering');
+
+      const ACTIVE       = 'flex flex-col items-center justify-center text-teal-700 font-bold text-xs py-1';
+      const INACTIVE     = 'flex flex-col items-center justify-center text-slate-400 font-medium text-xs py-1 transition';
+      const DIV_ACTIVE   = 'w-10 h-7 rounded-full bg-teal-50 flex items-center justify-center mb-1';
+      const DIV_INACTIVE = 'w-10 h-7 flex items-center justify-center mb-1';
+
+      ['map', 'progress', 'contact', 'hankan'].forEach(key => {
+        const targetKey = key === 'contact' ? 'chat' : key;
+        const navEl = document.getElementById(`nav-${key}`);
+        if (navEl) {
+          const isCurrent = (targetKey === name);
+          navEl.className = isCurrent ? ACTIVE : INACTIVE;
+          const innerDiv = navEl.querySelector('div');
+          if (innerDiv) innerDiv.className = isCurrent ? DIV_ACTIVE : DIV_INACTIVE;
+        }
+      });
+
+      if (name === 'map') setTimeout(() => gisMap.invalidateSize(), 100);
+      if (name === 'progress') renderProgressSection();
+      if (name === 'chat') populateChatSelects();
+      if (name === 'hankan' && !hkInitialized) { hkInitialized = true; hkLoadData(); }
+      if (name === 'gathering') {
+        setTimeout(() => {
+          if (!gatheringMap) initGatheringMap();
+          else gatheringMap.invalidateSize();
+        }, 100);
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function initGatheringMap() {
+      gatheringMap = L.map('gathering-leaflet-map', { zoomControl: true, attributionControl: true, minZoom: 12 }).setView([DEFAULT_OSAKA_CASTLE.lat, DEFAULT_OSAKA_CASTLE.lng], 16);
+      L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '国土地理院' }).addTo(gatheringMap);
+      setGatheringPin(DEFAULT_OSAKA_CASTLE.lat, DEFAULT_OSAKA_CASTLE.lng, DEFAULT_OSAKA_CASTLE.name, DEFAULT_OSAKA_CASTLE.sub);
+      gatheringMap.on('click', function(e) {
+        setGatheringPin(e.latlng.lat, e.latlng.lng, '大阪城（指定地点）', `緯度: ${e.latlng.lat.toFixed(5)}, 経度: ${e.latlng.lng.toFixed(5)}`);
+      });
+    }
+
+    function createGatheringPinIcon() {
+      return L.divIcon({
+        className: '',
+        html: `<div class="custom-pin-marker w-10 h-10"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>`,
+        iconSize: [40, 46], iconAnchor: [20, 46], popupAnchor: [0, -42]
+      });
+    }
+
+    function setGatheringPin(lat, lng, name, sub) {
+      if (currentGatheringMarker) {
+        currentGatheringMarker.setLatLng([lat, lng]);
+      } else {
+        currentGatheringMarker = L.marker([lat, lng], { icon: createGatheringPinIcon(), draggable: true }).addTo(gatheringMap);
+      }
+      currentSpotName = name;
+      currentSpotSub = sub;
+      document.getElementById('spot-name-display').textContent = name;
+      document.getElementById('spot-subtext').textContent = sub;
+      document.getElementById('pin-coords-text').textContent = `緯度: ${lat.toFixed(4)}, 経度: ${lng.toFixed(4)}`;
+      document.getElementById('confirm-spot').textContent = name;
+    }
+
+    function selectSpotPreset(name, lat, lng) {
+      setGatheringPin(lat, lng, name, '大阪城エリア 指定集合地点');
+      gatheringMap.setView([lat, lng], 16, { animate: true });
+    }
+
+    function resetToOsakaCastle() {
+      selectSpotPreset(DEFAULT_OSAKA_CASTLE.name, DEFAULT_OSAKA_CASTLE.lat, DEFAULT_OSAKA_CASTLE.lng);
+    }
+
+    function centerPinLocation() {
+      if (currentGatheringMarker) gatheringMap.setView(currentGatheringMarker.getLatLng(), 16, { animate: true });
+    }
+
+    function editCustomSpotName() {
+      const newName = prompt('集合場所の表示名を入力してください：', currentSpotName);
+      if (newName && newName.trim()) {
+        currentSpotName = newName.trim();
+        const pos = currentGatheringMarker.getLatLng();
+        setGatheringPin(pos.lat, pos.lng, currentSpotName, '教員によるカスタム指定名');
+      }
+    }
+
+    function handleGatheringSearch() {
+      const query = document.getElementById('map-search-input').value.trim();
+      if (query) alert(`「${query}」の検索機能はデモ版では未実装です。プリセットボタンをご利用ください。`);
+    }
+
+    function onDateInputChange(val) {
+      currentTargetDate = val;
+      const d = new Date(val);
+      currentTargetDateDisplay = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+      document.getElementById('date-display-text').textContent = currentTargetDateDisplay;
+      document.getElementById('confirm-date').textContent = `${currentTargetDateDisplay}(金)`;
+    }
+
+    function setDateValue(dateVal, displayStr, dayStr) {
+      currentTargetDate = dateVal;
+      currentTargetDateDisplay = displayStr;
+      document.getElementById('date-picker-input').value = dateVal;
+      document.getElementById('date-display-text').textContent = displayStr;
+      document.getElementById('confirm-date').textContent = `${displayStr}${dayStr}`;
+    }
+
+    function resetToTargetDate() { setDateValue('2026-09-18', '2026年9月18日', '(金)'); }
+
+    function setTimePreset(timeStr) {
+      currentTargetTime = timeStr;
+      document.getElementById('target-time-main-display').textContent = timeStr;
+      document.getElementById('confirm-time').textContent = timeStr;
+      const [h, m] = timeStr.split(':');
+      document.getElementById('minute-counter-badge').textContent = `${h}時 ${m}分`;
+    }
+
+    function onManualTimeSelectChange() {
+      const h = document.getElementById('time-hour-select').value;
+      const m = document.getElementById('time-minute-select').value;
+      currentTargetTime = `${h}:${m}`;
+      document.getElementById('target-time-main-display').textContent = currentTargetTime;
+      document.getElementById('confirm-time').textContent = currentTargetTime;
+      document.getElementById('minute-counter-badge').textContent = `${h}時 ${m}分`;
+    }
+
+    function broadcastGatheringSetting() {
+      const pos = currentGatheringMarker ? currentGatheringMarker.getLatLng() : { lat: DEFAULT_OSAKA_CASTLE.lat, lng: DEFAULT_OSAKA_CASTLE.lng };
+      const payload = { spotName: currentSpotName, lat: pos.lat, lng: pos.lng, date: currentTargetDate, time: currentTargetTime };
+      localStorage.setItem('qlink_gathering_setting', JSON.stringify(payload));
+      alert(`📢 全生徒端末へ配信完了: 「${currentSpotName}」 ${currentTargetDateDisplay} ${currentTargetTime}`);
+    }
+
+    function saveDraftOnly() {
+      alert('💾 集合設定を下書き保存しました');
+    }
+
+    // ========== 進捗管理 ==========
+
+    function calculateGroupAccuracy(groupKey) {
+      let totalQuestions = 0;
+      let correctQuestions = 0;
+      for (let i = 0; i < 4; i++) {
+        const savedQuestions = JSON.parse(localStorage.getItem(`qlink_spot_${i}_questions_${groupKey}`)) || DEFAULT_SPOT_QUESTIONS[i];
+        savedQuestions.forEach(q => {
+          if (q.status !== 'unsubmitted') {
+            totalQuestions++;
+            if (q.status === 'correct') correctQuestions++;
+          }
+        });
+      }
+      if (totalQuestions === 0) return 0;
+      return Math.round((correctQuestions / totalQuestions) * 100);
+    }
+
+    function calculateClassAccuracy() {
+      const groupKeys = Object.keys(groupsData);
+      if (groupKeys.length === 0) return 0;
+      let sum = 0;
+      groupKeys.forEach(id => { sum += calculateGroupAccuracy(id); });
+      return Math.round(sum / groupKeys.length);
+    }
+
+    function calculateGradeAccuracy() { return calculateClassAccuracy(); }
+
+    function switchAccuracyTab(tabName) {
+      currentAccuracyTab = tabName;
+      ['grade', 'class', 'group'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) {
+          btn.className = (t === tabName)
+            ? 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-teal-700 shadow-xs'
+            : 'flex-1 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        }
+      });
+      const groupSelectWrapper = document.getElementById('accuracy-group-select-wrapper');
+      if (groupSelectWrapper) {
+        groupSelectWrapper.classList.toggle('hidden', tabName !== 'group');
+        if (tabName === 'group') updateAccuracyGroupSelectOptions();
+      }
+      renderAccuracyUI();
+    }
+
+    function updateAccuracyGroupSelectOptions() {
+      const selectEl = document.getElementById('accuracy-group-select');
+      if (!selectEl) return;
+      const currentVal = selectEl.value;
+      const groupKeys = Object.keys(groupsData);
+      if (groupKeys.length === 0) return;
+      selectEl.innerHTML = groupKeys.map(key => `<option value="${key}">${groupsData[key].className || ''} ${groupsData[key].displayName || key}</option>`).join('');
+      if (groupKeys.includes(currentVal)) selectEl.value = currentVal;
+    }
+
+    function renderAccuracyUI() {
+      const labelEl = document.getElementById('accuracy-display-label');
+      const valEl = document.getElementById('active-accuracy-value');
+      if (!labelEl || !valEl) return;
+
+      if (currentAccuracyTab === 'grade') {
+        labelEl.textContent = '学年全体の正解率';
+        valEl.textContent = `${calculateGradeAccuracy()}%`;
+      } else if (currentAccuracyTab === 'class') {
+        labelEl.textContent = 'クラス全体の正解率';
+        valEl.textContent = `${calculateClassAccuracy()}%`;
+      } else if (currentAccuracyTab === 'group') {
+        const selectEl = document.getElementById('accuracy-group-select');
+        const selectedGroupKey = selectEl ? selectEl.value : Object.keys(groupsData)[0] || '1組_1班';
+        const gObj = groupsData[selectedGroupKey];
+        labelEl.textContent = `${gObj ? (gObj.className || '') + ' ' + (gObj.displayName || selectedGroupKey) : selectedGroupKey}の正解率`;
+        valEl.textContent = `${calculateGroupAccuracy(selectedGroupKey)}%`;
+      }
+    }
+
+    function renderProgressSection() {
+      renderAccuracyUI();
+      const container = document.getElementById('progress-groups-container');
+      if (!container) return;
+
+      const groupKeys = Object.keys(groupsData);
+      if (groupKeys.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center text-xs text-slate-400 py-12 bg-white rounded-2xl border border-slate-200">表示対象の班データが存在しません。上のデバッグパネルから班を追加してください。</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      let totalClearedSpots = 0;
+      let completedGroups = 0;
+      let inProgressGroups = 0;
+      let unstartedGroups = 0;
+
+      groupKeys.forEach(key => {
+        const group = groupsData[key] || {};
+        const clearedSpots = JSON.parse(localStorage.getItem(`qlink_cleared_${key}`) || '[]');
+        const count = clearedSpots.length;
+        totalClearedSpots += count;
+
+        let statusLabel = '未開始';
+        let statusColor = 'bg-slate-100 text-slate-600 border-slate-200';
+
+        if (count === 4) {
+          completedGroups++;
+          statusLabel = '全スポット達成';
+          statusColor = 'bg-teal-100 text-teal-800 border-teal-200 font-extrabold';
+        } else if (count > 0) {
+          inProgressGroups++;
+          statusLabel = '進行中';
+          statusColor = 'bg-amber-100 text-amber-800 border-amber-200';
+        } else {
+          unstartedGroups++;
+        }
+
+        const barPct = Math.round((count / 4) * 100);
+        const groupAccuracy = calculateGroupAccuracy(key);
+        const memberInfoStr = `班長 ${group.leader || '未設定'} 班員 ${(group.members || []).join(' ')}`;
+
+        const spotBadges = ALL_SPOTS.map((s) => {
+          const isCleared = clearedSpots.includes(s.name);
+          return `
+            <div class="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border ${isCleared ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-slate-50 text-slate-400 border-slate-100 line-through'}">
+              <i data-lucide="${isCleared ? 'check-circle-2' : 'circle'}" class="w-3.5 h-3.5 ${isCleared ? 'text-teal-600' : 'text-slate-300'}"></i>
+              <span>${s.name}</span>
+            </div>
+          `;
+        }).join('');
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 hover:border-teal-200 transition flex flex-col gap-4';
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-600 text-white font-extrabold text-sm flex items-center justify-center shadow-xs">
+                ${group.displayName ? group.displayName.replace('班','') : key}
+              </div>
+              <div>
+                <div class="font-extrabold text-slate-900 text-base">${group.className || ''} ${group.displayName || key}</div>
+                <div class="text-xs text-teal-700 font-bold mt-0.5">${memberInfoStr}</div>
+              </div>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-full border font-bold ${statusColor}">${statusLabel}</span>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-700">
+              <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-teal-600"></i>4大スポット達成度 (正答率: ${groupAccuracy}%)</span>
+              <span class="text-teal-700 font-extrabold">${count} / 4 <span class="text-slate-400 font-normal">(${barPct}%)</span></span>
+            </div>
+            <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500 bg-teal-500" style="width:${barPct}%"></div>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">${spotBadges}</div>
+            <button type="button" onclick="showGroupDetailModal('${key}')" class="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 font-bold text-xs rounded-xl transition flex items-center gap-1 flex-shrink-0">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i><span>詳細確認</span>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      const totalGroups = groupKeys.length;
+      const overallAvg = totalGroups > 0 ? Math.round((totalClearedSpots / (totalGroups * 4)) * 100) : 0;
+
+      const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setEl('prog-stat-avg', `${overallAvg}%`);
+      setEl('prog-stat-complete', completedGroups);
+      setEl('prog-stat-total', totalGroups);
+      setEl('prog-stat-in-progress', `${inProgressGroups} 班`);
+      setEl('prog-stat-unstarted', `${unstartedGroups} 班`);
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function applyDebugAddGroup() {
+      const classNameInput = document.getElementById('debug-target-class').value.trim() || '1組';
+      const groupInput = document.getElementById('debug-target-group').value.trim() || '5班';
+      const count = parseInt(document.getElementById('debug-spot-count').value, 10);
+      if (!groupInput) { alert('対象の班名を入力してください'); return; }
+
+      const groupName = groupInput.includes('班') ? groupInput : groupInput + '班';
+      const targetKey = `${classNameInput}_${groupName}`;
+
+      if (!groupsData[targetKey]) {
+        const savedData = loadGroupRosterStorage(targetKey);
+        groupsData[targetKey] = {
+          id: groupName.replace('班',''),
+          className: classNameInput,
+          displayName: groupName,
+          leader: savedData.leader || '大木',
+          members: savedData.members || ['北', '高橋'],
+          lat: null, lng: null
+        };
+        groupStates[targetKey] = true;
+      }
+
+      const clearedNames = ALL_SPOTS.slice(0, count).map(s => s.name);
+      localStorage.setItem(`qlink_cleared_${targetKey}`, JSON.stringify(clearedNames));
+
+      ALL_SPOTS.forEach((s, idx) => {
+        localStorage.setItem(`qlink_spot_${idx}_cleared_${targetKey}`, JSON.stringify(idx < count));
+      });
+
+      renderProgressSection();
+      hkShowToast(`🛠️ [DEBUG] ${classNameInput} ${groupName} を追加・更新しました`);
+    }
+
+    function applyDebugDeleteGroup() {
+      const classNameInput = document.getElementById('debug-target-class').value.trim() || '1組';
+      const groupInput = document.getElementById('debug-target-group').value.trim();
+      if (!groupInput) { alert('削除する対象の班名を入力してください（例: 5 または 5班）'); return; }
+
+      const groupName = groupInput.includes('班') ? groupInput : groupInput + '班';
+      const targetKey = `${classNameInput}_${groupName}`;
+
+      if (groupsData[targetKey]) {
+        delete groupsData[targetKey];
+        delete groupStates[targetKey];
+        if (groupMarkers[targetKey]) {
+          gisMap.removeLayer(groupMarkers[targetKey]);
+          delete groupMarkers[targetKey];
+        }
+        localStorage.removeItem(`qlink_cleared_${targetKey}`);
+        localStorage.removeItem(`qlink_roster_${targetKey}`);
+        renderProgressSection();
+        hkShowToast(`🗑️ [DEBUG] ${classNameInput} ${groupName} を削除しました`);
+      } else {
+        alert(`指定された班 (${targetKey}) は存在しません。`);
+      }
+    }
+
+    // ========== スポット別詳細モーダル ==========
+
+    function showGroupDetailModal(groupKey) {
+      currentEditingGroupId = groupKey;
+      currentSpotIndex = 0;
+
+      const group = groupsData[groupKey] || { className: '1年1組', displayName: '1班', leader: '大木', members: ['北', '高橋'] };
+      document.getElementById('modal-group-title').textContent = `${group.className || ''} ${group.displayName} - 詳細確認`;
+      document.getElementById('modal-group-members').textContent = `班長: ${group.leader || '未登録'} | 班員: ${(group.members || []).join(' ')}`;
+
+      spotModalData = {};
+      ALL_SPOTS.forEach((spot, idx) => {
+        const savedPhotoStatus = localStorage.getItem(`qlink_spot_${idx}_photo_${groupKey}`);
+        const savedMemo = JSON.parse(localStorage.getItem(`qlink_spot_${idx}_memo_${groupKey}`)) || DEFAULT_MEMOS[idx];
+        const savedQuestions = JSON.parse(localStorage.getItem(`qlink_spot_${idx}_questions_${groupKey}`)) || DEFAULT_SPOT_QUESTIONS[idx];
+        const savedCleared = localStorage.getItem(`qlink_spot_${idx}_cleared_${groupKey}`);
+
+        spotModalData[idx] = {
+          photoState: savedPhotoStatus !== null ? savedPhotoStatus : 'submitted',
+          memo: savedMemo,
+          questions: JSON.parse(JSON.stringify(savedQuestions)),
+          isCleared: savedCleared !== null ? JSON.parse(savedCleared) : true
+        };
+      });
+
+      switchSpotTab(0);
+
+      const modal = document.getElementById('group-detail-modal');
+      const container = document.getElementById('group-detail-container');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      container.classList.remove('translate-y-full');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function switchSpotTab(spotIdx) {
+      currentSpotIndex = spotIdx;
+
+      for (let i = 0; i < 4; i++) {
+        const tab = document.getElementById(`spot-tab-${i}`);
+        if (tab) {
+          tab.className = (i === spotIdx)
+            ? 'flex-1 py-2 px-3 text-xs font-bold rounded-xl transition bg-white text-teal-700 shadow-xs whitespace-nowrap'
+            : 'flex-1 py-2 px-3 text-xs font-bold transition text-slate-600 hover:text-slate-900 whitespace-nowrap';
+        }
+      }
+
+      const spot = ALL_SPOTS[spotIdx];
+      const data = spotModalData[spotIdx];
+      if (!spot || !data) return;
+
+      document.getElementById('modal-spot-photo-title').innerHTML = `<i data-lucide="image" class="w-4 h-4 text-teal-600"></i>提出写真 (${spot.name})`;
+      document.getElementById('modal-spot-memo-heading').textContent = `${spot.name}のフィールドメモ`;
+      document.getElementById('modal-photo-1').src = spot.photo1Url;
+      document.getElementById('modal-photo-2').src = spot.photo2Url;
+      document.getElementById('photo-label-1').textContent = `${spot.name} 写真1`;
+      document.getElementById('photo-label-2').textContent = `${spot.name} 写真2`;
+
+      document.getElementById('memo-author').value = data.memo.author || '';
+      document.getElementById('memo-tags').value = data.memo.tags || '';
+      document.getElementById('memo-content').value = data.memo.content || '';
+
+      applyPhotoStateUI();
+      renderModalQuestionsUI();
+      updateSpotClearStatusUI();
+      updateModalTaskStatus();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function debugSetPhotoStatus(status) {
+      spotModalData[currentSpotIndex].photoState = status;
+      applyPhotoStateUI();
+      updateModalTaskStatus();
+    }
+
+    function applyPhotoStateUI() {
+      const state = spotModalData[currentSpotIndex].photoState;
+      const p1Img = document.getElementById('modal-photo-1');
+      const p2Img = document.getElementById('modal-photo-2');
+      const p1Ph = document.getElementById('photo-placeholder-1');
+      const p2Ph = document.getElementById('photo-placeholder-2');
+      const badge = document.getElementById('modal-photo-status-indicator');
+
+      const dlBtn = document.getElementById('modal-photo-download-btn');
+      if (state === 'submitted') {
+        p1Img.classList.remove('hidden'); p2Img.classList.remove('hidden');
+        p1Ph.classList.add('hidden'); p2Ph.classList.add('hidden');
+        badge.textContent = '提出済み';
+        badge.className = 'text-[10px] bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded-md font-bold';
+        if (dlBtn) dlBtn.classList.remove('hidden');
+      } else {
+        p1Img.classList.add('hidden'); p2Img.classList.add('hidden');
+        p1Ph.classList.remove('hidden'); p2Ph.classList.remove('hidden');
+        badge.textContent = '未提出';
+        badge.className = 'text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-bold';
+        if (dlBtn) dlBtn.classList.add('hidden');
+      }
+    }
+
+    function downloadSubmittedPhotos(e) {
+      if (e) { e.stopPropagation(); e.preventDefault(); }
+      const spot = spotModalData[currentSpotIndex];
+      const img1 = document.getElementById('modal-photo-1');
+      const img2 = document.getElementById('modal-photo-2');
+      [img1, img2].forEach(function(img, i) {
+        if (img && img.src && !img.classList.contains('hidden')) {
+          const a = document.createElement('a');
+          a.href = img.src;
+          a.download = (spot ? spot.name : 'photo') + '_' + (i + 1) + '.jpg';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      });
+    }
+
+    function renderModalQuestionsUI() {
+      const questions = spotModalData[currentSpotIndex].questions;
+      const container = document.getElementById('modal-questions-list');
+      if (!container) return;
+
+      container.innerHTML = questions.map((q, idx) => {
+        let statusClass = q.status === 'correct' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : q.status === 'incorrect' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-slate-100 text-slate-500 border-slate-300';
+        let iconName = q.status === 'correct' ? 'check' : q.status === 'incorrect' ? 'x' : 'minus';
+        let statusText = q.status === 'correct' ? '正解 ◯' : q.status === 'incorrect' ? '不正解 ✕' : '未提出 -';
+
+        return `
+          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-bold text-teal-700">問 ${idx + 1}</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="cycleModalQuestionStatus(${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 border ${statusClass}">
+                  <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i><span>${statusText}</span>
+                </button>
+                <button type="button" onclick="removeModalQuestion(${idx})" class="text-slate-400 hover:text-rose-600 transition p-1">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-0.5">問題文:</label>
+              <input type="text" value="${(q.text || '').replace(/"/g, '&quot;')}" oninput="updateQuestionField(${idx}, 'text', this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-0.5">正解・期待する回答:</label>
+              <input type="text" value="${(q.answer || '').replace(/"/g, '&quot;')}" oninput="updateQuestionField(${idx}, 'answer', this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateQuestionField(idx, field, value) {
+      spotModalData[currentSpotIndex].questions[idx][field] = value;
+    }
+
+    function cycleModalQuestionStatus(idx) {
+      const q = spotModalData[currentSpotIndex].questions[idx];
+      q.status = q.status === 'correct' ? 'incorrect' : q.status === 'incorrect' ? 'unsubmitted' : 'correct';
+      renderModalQuestionsUI();
+      updateModalTaskStatus();
+    }
+
+    function addModalQuestionRow() {
+      spotModalData[currentSpotIndex].questions.push({
+        id: 'q_custom_' + Date.now(),
+        text: '新しい問題文を入力してください',
+        answer: '正解',
+        status: 'unsubmitted'
+      });
+      renderModalQuestionsUI();
+    }
+
+    function removeModalQuestion(idx) {
+      spotModalData[currentSpotIndex].questions.splice(idx, 1);
+      renderModalQuestionsUI();
+    }
+
+    function debugSetSpotClear(isCleared) {
+      spotModalData[currentSpotIndex].isCleared = isCleared;
+      updateSpotClearStatusUI();
+      updateModalTaskStatus();
+    }
+
+    function updateSpotClearStatusUI() {
+      const isCleared = spotModalData[currentSpotIndex].isCleared;
+      const badge = document.getElementById('spot-clear-status-badge');
+      if (!badge) return;
+      badge.textContent = isCleared ? 'クリア済み' : '未訪問';
+      badge.className = isCleared ? 'text-[10px] px-2 py-0.5 rounded font-bold bg-teal-100 text-teal-800' : 'text-[10px] px-2 py-0.5 rounded font-bold bg-slate-200 text-slate-600';
+    }
+
+    function updateModalTaskStatus() {
+      const data = spotModalData[currentSpotIndex];
+      const allCorrect = data.questions.length > 0 && data.questions.every(q => q.status === 'correct');
+      const isCompleted = allCorrect && data.photoState === 'submitted' && data.isCleared;
+
+      const badge = document.getElementById('modal-task-status-badge');
+      if (!badge) return;
+      badge.textContent = isCompleted ? '🎉 スポット達成完了' : '⏳ 攻略中';
+      badge.className = isCompleted ? 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-teal-100 text-teal-800 border border-teal-300' : 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300';
+    }
+
+    function closeGroupDetailModal() {
+      const container = document.getElementById('group-detail-container');
+      const modal = document.getElementById('group-detail-modal');
+      if (container) container.classList.add('translate-y-full');
+      if (modal) modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function saveGroupDetailData() {
+      if (!currentEditingGroupId) return;
+
+      spotModalData[currentSpotIndex].memo = {
+        author: document.getElementById('memo-author').value,
+        tags: document.getElementById('memo-tags').value,
+        content: document.getElementById('memo-content').value
+      };
+
+      ALL_SPOTS.forEach((spot, idx) => {
+        const sData = spotModalData[idx];
+        localStorage.setItem(`qlink_spot_${idx}_photo_${currentEditingGroupId}`, sData.photoState);
+        localStorage.setItem(`qlink_spot_${idx}_memo_${currentEditingGroupId}`, JSON.stringify(sData.memo));
+        localStorage.setItem(`qlink_spot_${idx}_questions_${currentEditingGroupId}`, JSON.stringify(sData.questions));
+        localStorage.setItem(`qlink_spot_${idx}_cleared_${currentEditingGroupId}`, JSON.stringify(sData.isCleared));
+      });
+
+      const clearedSpotNames = ALL_SPOTS.filter((_, idx) => spotModalData[idx].isCleared).map(s => s.name);
+      localStorage.setItem(`qlink_cleared_${currentEditingGroupId}`, JSON.stringify(clearedSpotNames));
+
+      closeGroupDetailModal();
+      renderProgressSection();
+      const gObj = groupsData[currentEditingGroupId];
+      hkShowToast(`✅ ${gObj ? (gObj.className || '') + ' ' + gObj.displayName : currentEditingGroupId} のスポットデータを保存しました`);
+    }
+
+    // ========== 連絡チャット ==========
+    function populateChatSelects() {
+      const classSel = document.getElementById('chatClassSelect');
+      classSel.innerHTML = '<option value="">-- クラスを選択 --</option>';
+      if (currentSchoolData && currentSchoolData.classes) {
+        currentSchoolData.classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.name; opt.textContent = c.name;
+          classSel.appendChild(opt);
+        });
+        classSel.value = selectedClassIndex >= 0 ? (currentSchoolData.classes[selectedClassIndex]?.name || '') : (currentSchoolData.classes[0]?.name || '');
+      }
+      onChatClassChange();
+    }
+
+    function onChatClassChange() {
+      const groupSel = document.getElementById('chatGroupSelect');
+      const cls = document.getElementById('chatClassSelect').value;
+      groupSel.innerHTML = '<option value="all">📢 全班一斉</option>';
+      if (cls && currentSchoolData && currentSchoolData.classes) {
+        const classInfo = currentSchoolData.classes.find(c => c.name === cls);
+        if (classInfo && classInfo.groupCount > 0) {
+          for (let g = 1; g <= classInfo.groupCount; g++) {
+            const key = `${cls}_${g}班`;
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = `${g}班`;
+            groupSel.appendChild(opt);
+          }
+        }
+      }
+      loadTeacherChatSection();
+    }
+
+    async function loadTeacherChatSection() {
+      const box = document.getElementById('teacherChatBox');
+      const cls = document.getElementById('chatClassSelect').value;
+      const gId = document.getElementById('chatGroupSelect').value;
+
+      if (!cls) {
+        box.innerHTML = '<div class="text-center text-xs text-slate-400 py-10">クラスを選択してください。</div>';
+        return;
+      }
+      if (gId === 'all') {
+        box.innerHTML = '<div class="bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold p-3 rounded-xl text-center">📢 全班一斉送信モード<br><span class="font-normal">送信すると選択中クラスの全班に届きます</span></div>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/chat?school=school1&className=${encodeURIComponent(cls)}&group=${encodeURIComponent(gId)}`);
+        const messages = await res.json();
+        box.innerHTML = '';
+        if (!messages.length) {
+          box.innerHTML = '<div class="text-center text-xs text-slate-400 py-10">まだメッセージがありません。</div>';
+        } else {
+          messages.forEach(msg => {
+            const div = document.createElement('div');
+            const isTeacher = (msg.sender === '先生' || msg.sender === '教員');
+            div.className = isTeacher ? 'flex justify-end mb-2' : 'flex items-start gap-2 mb-2';
+            div.innerHTML = isTeacher ? `
+              <div class="max-w-[80%] bg-[#0d9488] text-white rounded-2xl rounded-tr-none p-2.5 text-xs">
+                <div class="font-bold mb-0.5">${msg.sender} <span class="opacity-75 font-normal">${msg.time||''}</span></div>
+                <div>${msg.text}</div>
+              </div>` : `
+              <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">生</div>
+              <div class="max-w-[80%] bg-white border border-slate-200 rounded-2xl rounded-tl-none p-2.5 text-xs">
+                <div class="font-bold text-teal-700 mb-0.5">${msg.sender||'生徒'} <span class="text-slate-400 font-normal">${msg.time||''}</span></div>
+                <div class="text-slate-700">${msg.text}</div>
+              </div>`;
+            box.appendChild(div);
+          });
+          box.scrollTop = box.scrollHeight;
+        }
+      } catch(e) {
+        box.innerHTML = '<div class="text-center text-xs text-rose-500 py-6">チャット読み込みエラー</div>';
+      }
+    }
+
+    async function sendTeacherChatMessage() {
+      const input = document.getElementById('teacherChatInput');
+      const text = input.value.trim();
+      const cls = document.getElementById('chatClassSelect').value;
+      const gId = document.getElementById('chatGroupSelect').value;
+
+      if (!text || !cls) return;
+      input.value = '';
+
+      try {
+        if (gId === 'all') {
+          await fetch('/api/chat/broadcast', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ school: 'school1', className: cls, sender: '先生', text: text })
+          });
+          document.getElementById('teacherChatBox').innerHTML = '<div class="bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold p-3 rounded-xl text-center">✅ 全班に一斉送信しました</div>';
+        } else {
+          await fetch('/api/chat', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ school: 'school1', className: cls, group: gId, sender: '先生', text: text })
+          });
+          loadTeacherChatSection();
+        }
+      } catch(e) { alert('送信に失敗しました'); }
+    }
+
+    // ========== 班管理（ローカルファイル構造連動版） ==========
+    let hkAppData = {};
+    let hkCurrentClass = '';
+    let hkCurrentTeamIndex = 1;
+
+    async function hkLoadData() {
+      const schoolId = localStorage.getItem('qlink_school_id') || 'school1';
+      
+      try {
+        const res = await fetch(`data/kanri/${schoolId}/school.json`);
+        if (!res.ok) throw new Error('学校データが存在しません');
+
+        const schoolData = await res.json();
+        hkAppData = {};
+
+        const grade = schoolData.grade || '';
+        const classes = schoolData.classes || [];
+
+        for (let cIdx = 0; cIdx < classes.length; cIdx++) {
+          const cls = classes[cIdx];
+          const fullClass = grade + cls.name; // 例: "1年1組"
+          const classFolder = `class${cIdx + 1}`;
+          
+          hkAppData[fullClass] = { 
+            teacher: schoolData.teacher || '担当教員', 
+            teams: {} 
+          };
+
+          for (let g = 1; g <= (cls.groupCount || 6); g++) {
+            const groupFolder = `group${g}`;
+            const csvPath = `data/kanri/${schoolId}/${classFolder}/${groupFolder}/members.csv`;
+            
+            let members = [];
+            try {
+              const csvRes = await fetch(csvPath);
+              if (csvRes.ok) {
+                const text = await csvRes.text();
+                const lines = text.split('\n')
+                  .map(l => l.trim())
+                  .filter(l => l.length > 0 && !l.startsWith('id') && !l.startsWith('名前') && !l.startsWith('name'));
+                
+                members = lines.map((name, idx) => ({
+                  no: String(idx + 1).padStart(2, '0'),
+                  name: name,
+                  role: idx === 0 ? '班長' : '班員',
+                  isLeader: idx === 0
+                }));
+              }
+            } catch (e) {}
+
+            hkAppData[fullClass].teams[g] = members;
+          }
+        }
+
+        const clsList = Object.keys(hkAppData);
+        if (clsList.length) {
+          hkCurrentClass = clsList[0];
+          hkRenderClassDropdown();
+          hkSelectClassUI(hkCurrentClass);
+        }
+        hkRebuildTeams();
+      } catch (err) {
+        console.warn('班管理データの読み込みに失敗しました:', err);
+      }
+    }
+
+    function hkRenderClassDropdown() {
+      document.getElementById('hk-class-dropdown-list').innerHTML = Object.keys(hkAppData).map(cls => `
+        <button onclick="hkSelectClass('${cls}')" class="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 transition-colors text-left">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">${cls.replace(/[^0-9]/g,'')}</div>
+            <div class="flex flex-col"><span class="font-bold text-sm text-slate-800">${cls}</span><span class="text-xs text-slate-500">担任: ${hkAppData[cls].teacher}</span></div>
+          </div>
+          <span class="material-symbols-outlined text-slate-400 text-[18px]">chevron_right</span>
+        </button>
+      `).join('');
+    }
+
+    function hkToggleClassDropdown() {
+      const list = document.getElementById('hk-class-dropdown-list');
+      const icon = document.getElementById('hk-class-toggle-icon');
+      const isOpen = !list.classList.contains('max-h-0');
+      if (isOpen) { list.classList.add('max-h-0','opacity-0','pointer-events-none'); icon.style.transform = 'rotate(0deg)'; }
+      else { list.classList.remove('max-h-0','opacity-0','pointer-events-none'); list.classList.add('max-h-64','opacity-100'); icon.style.transform = 'rotate(180deg)'; }
+    }
+
+    function hkSelectClass(cls) { hkCurrentClass = cls; hkCurrentTeamIndex = 1; hkToggleClassDropdown(); hkSelectClassUI(cls); }
+
+    function hkSelectClassUI(cls) {
+      const d = hkAppData[cls];
+      if (!d) return;
+      const keys = Object.keys(d.teams).map(Number).sort((a,b)=>a-b);
+      const total = keys.reduce((s,k)=>s+d.teams[k].length,0);
+      document.getElementById('hk-current-class-title').innerText = cls;
+      document.getElementById('hk-current-class-subtitle').innerText = `担任: ${d.teacher} ／ 全${keys.length}班`;
+      document.getElementById('hk-roster-count-summary').innerText = `（全${keys.length}班・${total}名）`;
+      document.getElementById('hk-team-selector-tabs').innerHTML = keys.map(t => {
+        const active = t === hkCurrentTeamIndex;
+        return `<button onclick="hkSelectTeam(${t})" class="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${active ? 'bg-teal-600 text-white shadow-xs ring-2 ring-teal-600/30' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}">
+          ${active ? '<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>' : ''}
+          <span>${t}班</span>
+          <span class="${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded-full text-[10px]">${d.teams[t].length}名</span>
+        </button>`;
+      }).join('');
+      hkRenderTeamDetail();
+    }
+
+    function hkSelectTeam(n) { hkCurrentTeamIndex = n; hkSelectClassUI(hkCurrentClass); }
+
+    function hkRenderTeamDetail() {
+      const team = (hkAppData[hkCurrentClass] && hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex]) || [];
+      const leader = team.find(m=>m.isLeader) || null;
+      document.getElementById('hk-active-team-indicator').innerText = `${hkCurrentTeamIndex}班 表示中`;
+      document.getElementById('hk-selected-team-num').innerText = hkCurrentTeamIndex;
+      document.getElementById('hk-selected-team-title').innerText = `${hkCurrentClass} ${hkCurrentTeamIndex}班`;
+      document.getElementById('hk-roster-title-count').innerHTML = `<span class="material-symbols-outlined text-[18px] text-teal-600">badge</span> 班員名簿（計 ${team.length} 名）`;
+      document.getElementById('hk-leader-name').innerText = leader ? leader.name : '未登録';
+      const c = document.getElementById('hk-members-list-container');
+      if (!team.length) { c.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">班員未登録。右上の「編集」から追加してください。</div>'; return; }
+      c.innerHTML = team.map(m => `
+        <div class="p-3 px-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div class="flex items-center gap-3">
+            <span class="w-6 text-center font-mono text-xs font-bold text-slate-400">#${m.no||'-'}</span>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-800">${m.name}</span>
+                ${m.isLeader ? '<span class="bg-teal-50 text-teal-700 text-[10px] font-bold px-1.5 py-0.5 rounded">班長</span>' : ''}
+              </div>
+              <span class="text-xs text-slate-400">${m.role||'班員'}</span>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-teal-600 flex items-center gap-0.5"><span class="material-symbols-outlined text-[14px]">check_circle</span>登録済</span>
+        </div>
+      `).join('');
+    }
+
+    function hkOpenEditModal() {
+      document.getElementById('hk-edit-modal-title').innerText = `${hkCurrentClass} ${hkCurrentTeamIndex}班 メンバー編集`;
+      hkRenderEditableList();
+      document.getElementById('team-edit-modal').classList.remove('opacity-0','pointer-events-none');
+      document.getElementById('team-edit-container').classList.remove('translate-y-full');
+    }
+
+    function hkCloseEditModal() {
+      document.getElementById('team-edit-container').classList.add('translate-y-full');
+      document.getElementById('team-edit-modal').classList.add('opacity-0','pointer-events-none');
+    }
+
+    function hkRenderEditableList() {
+      const team = (hkAppData[hkCurrentClass] && hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex]) || [];
+      const list = document.getElementById('hk-editable-members-list');
+      if (!team.length) { list.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">追加ボタンから班員を追加してください</p>'; return; }
+      list.innerHTML = team.map((m, idx) => `
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-xs font-bold text-slate-500">No:</span>
+              <input type="text" value="${m.no||''}" onchange="hkUpdateMember(${idx},'no',this.value)" class="w-14 text-center text-xs font-bold bg-white border border-slate-200 rounded-lg py-1 px-1.5">
+              <span class="text-xs font-bold text-slate-500 ml-1">氏名:</span>
+              <input type="text" value="${m.name}" onchange="hkUpdateMember(${idx},'name',this.value)" class="flex-1 text-xs font-bold bg-white border border-slate-200 rounded-lg py-1 px-2.5">
+            </div>
+            <button type="button" onclick="hkRemoveMember(${idx})" class="text-slate-400 hover:text-rose-500 p-1"><span class="material-symbols-outlined text-[20px]">delete</span></button>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-200">
+            <input type="text" value="${m.role||''}" onchange="hkUpdateMember(${idx},'role',this.value)" class="flex-1 text-xs bg-white border border-slate-200 rounded-lg py-1 px-2.5" placeholder="役割">
+            <label class="flex items-center gap-1 cursor-pointer ml-2"><input type="radio" name="hkIsLeader" ${m.isLeader?'checked':''} onchange="hkSetLeader(${idx})" class="accent-teal-600"><span class="text-xs font-bold text-teal-600">班長</span></label>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function hkUpdateMember(idx, field, val) {
+      const t = hkAppData[hkCurrentClass] && hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex];
+      if (t && t[idx]) t[idx][field] = val;
+    }
+
+    function hkSetLeader(idx) {
+      hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex].forEach((m,i)=>{ m.isLeader = (i===idx); });
+      hkRenderEditableList();
+    }
+
+    function hkAddNewMemberRow() {
+      if (!hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex]) hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex] = [];
+      const t = hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex];
+      t.push({ no: String(t.length+1).padStart(2,'0'), name: '新規 生徒', role: '班員', isLeader: false });
+      hkRenderEditableList();
+    }
+
+    function hkRemoveMember(idx) {
+      hkAppData[hkCurrentClass].teams[hkCurrentTeamIndex].splice(idx, 1);
+      hkRenderEditableList();
+    }
+
+    function hkSaveTeamEdit() {
+      hkCloseEditModal();
+      hkSelectClassUI(hkCurrentClass);
+      hkRebuildTeams();
+      hkShowToast('✅ 保存完了（画面表示を更新しました）');
+    }
+
+    function hkShowToast(msg) {
+      const t = document.getElementById('save-toast');
+      t.textContent = msg; t.classList.remove('hidden');
+      setTimeout(()=>{ t.classList.add('hidden'); }, 3000);
+    }
+
+    // 定期位置更新の取得
+    function updateStudentLocation() {
+      const now = Date.now();
+      let latestTime = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('qlink_gps_')) continue;
+        try {
+          const pos = JSON.parse(localStorage.getItem(key));
+          if (!pos || isNaN(pos.lat) || isNaN(pos.lng)) continue;
+          if (pos.time && (now - new Date(pos.time).getTime()) > 5 * 60 * 1000) continue;
+          const groupId = pos.group || pos.teamId || key.slice('qlink_gps_'.length);
+          if (groupsData[groupId]) {
+            updateGroupLocation(groupId, pos.lat, pos.lng);
+          }
+          if (!latestTime || (pos.time && pos.time > latestTime)) latestTime = pos.time;
+        } catch(e) {}
+      }
+      if (latestTime) {
+        const t = new Date(latestTime);
+        const el = document.getElementById('gps-update-time');
+        if (el) el.textContent = `GPS更新: ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+      }
+    }
+    setInterval(updateStudentLocation, 5000);
+
+    function logout() {
+      localStorage.removeItem('qlink_role');
+      localStorage.removeItem('qlink_teacher');
+      alert('ログアウトしました');
+    }
+
+    // ========== デバッグパネル ==========
+    const DEBUG_GPS_STEP = 0.0005; // 約55m/ステップ
+    let debugAchievementData = {};
+
+    function toggleDebugPanel() {
+      const panel = document.getElementById('debug-panel');
+      const isHidden = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !isHidden);
+      if (!isHidden) return;
+      populateDebugGroupSelects();
+      populateDebugChatSelects();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function showDebugTab(tab) {
+      ['gps', 'achievement', 'chat'].forEach(t => {
+        const content = document.getElementById('debug-content-' + t);
+        const btn = document.getElementById('debug-tab-' + t);
+        if (content) content.classList.toggle('hidden', t !== tab);
+        if (btn) {
+          btn.className = t === tab
+            ? 'flex-1 py-2 text-xs font-bold text-teal-700 border-b-2 border-teal-600 transition'
+            : 'flex-1 py-2 text-xs font-bold text-slate-500 border-b-2 border-transparent transition';
+        }
+      });
+    }
+
+    function populateDebugGroupSelects() {
+      const groups = Object.keys(groupsData);
+      ['debug-student-group', 'debug-achieve-group'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">-- 班を選択 --</option>';
+        groups.forEach(gId => {
+          const opt = document.createElement('option');
+          opt.value = gId;
+          opt.textContent = (groupsData[gId].displayName || gId + '班');
+          sel.appendChild(opt);
+        });
+        if (prev) sel.value = prev;
+      });
+    }
+
+    function populateDebugChatSelects() {
+      const classSel = document.getElementById('debug-chat-class');
+      if (!classSel) return;
+      classSel.innerHTML = '<option value="">-- クラスを選択 --</option>';
+      if (currentSchoolData && currentSchoolData.classes) {
+        currentSchoolData.classes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.name; opt.textContent = c.name;
+          classSel.appendChild(opt);
+        });
+      }
+      onDebugChatClassChange();
+    }
+
+    function onDebugChatClassChange() {
+      const groupSel = document.getElementById('debug-chat-group');
+      if (!groupSel) return;
+      groupSel.innerHTML = '<option value="">-- 班を選択 --</option>';
+      Object.keys(groupsData).forEach(gId => {
+        const opt = document.createElement('option');
+        opt.value = gId;
+        opt.textContent = (groupsData[gId].displayName || gId + '班');
+        groupSel.appendChild(opt);
+      });
+    }
+
+    function onDebugStudentGroupChange() {
+      const gId = document.getElementById('debug-student-group').value;
+      const el = document.getElementById('debug-student-coords');
+      if (!gId || !groupsData[gId]) { if (el) el.textContent = '-- 未設定 --'; return; }
+      const g = groupsData[gId];
+      if (el) el.textContent = g.lat !== null ? (g.lat.toFixed(5) + ', ' + g.lng.toFixed(5)) : '位置未取得';
+    }
+
+    function moveGPS(target, direction) {
+      const dlat = direction === 'up' ? DEBUG_GPS_STEP : direction === 'down' ? -DEBUG_GPS_STEP : 0;
+      const dlng = direction === 'right' ? DEBUG_GPS_STEP : direction === 'left' ? -DEBUG_GPS_STEP : 0;
+
+      if (target === 'teacher') {
+        if (!teacherLatLng) teacherLatLng = [34.6813, 135.5172];
+        teacherLatLng = [teacherLatLng[0] + dlat, teacherLatLng[1] + dlng];
+
+        if (!teacherMarker) {
+          teacherMarker = L.marker(teacherLatLng, {
+            icon: L.divIcon({
+              className: '',
+              html: '<div style="background:#0d9488;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);">教</div>',
+              iconSize: [28, 28], iconAnchor: [14, 14]
+            })
+          }).bindPopup('<b>現在地（教員・本部）</b>').addTo(gisMap);
+        } else {
+          teacherMarker.setLatLng(teacherLatLng);
+        }
+
+        if (geofenceCircle) {
+          geofenceCircle.setLatLng(teacherLatLng);
+        } else {
+          geofenceCircle = L.circle(teacherLatLng, {
+            radius: GEOFENCE_RADIUS_METERS, color: '#0d9488',
+            fillOpacity: 0.05, weight: 1.5, dashArray: '6,4'
+          }).addTo(gisMap);
+        }
+
+        gisMap.setView(teacherLatLng, gisMap.getZoom(), { animate: true });
+        const el = document.getElementById('debug-teacher-coords');
+        if (el) el.textContent = teacherLatLng[0].toFixed(5) + ', ' + teacherLatLng[1].toFixed(5);
+        localStorage.setItem('qlink_teacher_gps', JSON.stringify({ lat: teacherLatLng[0], lng: teacherLatLng[1], time: new Date().toISOString() }));
+
+        // ジオフェンス再計算
+        for (const gId in groupsData) {
+          const g = groupsData[gId];
+          if (g.lat !== null) updateGroupLocation(gId, g.lat, g.lng);
+        }
+        updateSummaryCounts();
+
+        const gpsEl = document.getElementById('gps-update-time');
+        if (gpsEl) gpsEl.textContent = 'デバッグGPS更新済み';
+
+      } else if (target === 'student') {
+        const gId = document.getElementById('debug-student-group').value;
+        if (!gId) { alert('班を選択してください'); return; }
+        const group = groupsData[gId];
+        if (!group) return;
+
+        const baseLat = group.lat !== null ? group.lat : (teacherLatLng ? teacherLatLng[0] : 34.6813);
+        const baseLng = group.lng !== null ? group.lng : (teacherLatLng ? teacherLatLng[1] : 135.5172);
+        const newLat = baseLat + dlat;
+        const newLng = baseLng + dlng;
+
+        updateGroupLocation(gId, newLat, newLng);
+        localStorage.setItem('qlink_gps_' + gId, JSON.stringify({ lat: newLat, lng: newLng, group: gId, time: new Date().toISOString() }));
+
+        const el = document.getElementById('debug-student-coords');
+        if (el) el.textContent = newLat.toFixed(5) + ', ' + newLng.toFixed(5);
+      }
+    }
+
+    function onDebugAchieveGroupChange() {
+      const gId = document.getElementById('debug-achieve-group').value;
+      if (!gId) return;
+      if (!debugAchievementData[gId]) {
+        const stored = localStorage.getItem('qlink_debug_achievement_' + gId);
+        debugAchievementData[gId] = stored ? JSON.parse(stored) : {
+          level: 0,
+          answers: [
+            { selected: null, correct: null },
+            { selected: null, correct: null },
+            { selected: null, correct: null },
+            { selected: null, correct: null }
+          ]
+        };
+      }
+      refreshDebugAchievementUI(gId);
+    }
+
+    function refreshDebugAchievementUI(gId) {
+      const data = debugAchievementData[gId];
+      if (!data) return;
+
+      const lvlEl = document.getElementById('debug-level-display');
+      if (lvlEl) lvlEl.textContent = 'レベル: ' + data.level;
+
+      for (let i = 0; i <= 4; i++) {
+        const btn = document.getElementById('debug-level-' + i);
+        if (btn) {
+          btn.className = i === data.level
+            ? 'flex-1 py-1.5 text-xs font-bold rounded-lg border border-teal-500 bg-teal-600 text-white transition'
+            : 'flex-1 py-1.5 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-teal-50 hover:border-teal-300 transition';
+        }
+      }
+
+      for (let q = 1; q <= 4; q++) {
+        const qData = data.answers[q - 1];
+        ['a','b','c','d'].forEach(c => {
+          const btn = document.getElementById('debug-q' + q + '-' + c);
+          if (btn) {
+            btn.className = qData.selected === c
+              ? 'flex-1 py-1 text-xs font-bold rounded-lg border border-blue-500 bg-blue-600 text-white transition'
+              : 'flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition';
+          }
+        });
+
+        const cBtn = document.getElementById('debug-q' + q + '-correct');
+        const wBtn = document.getElementById('debug-q' + q + '-incorrect');
+        if (cBtn) cBtn.className = qData.correct === true
+          ? 'flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-600 text-white transition'
+          : 'flex-1 py-1 text-xs font-bold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition';
+        if (wBtn) wBtn.className = qData.correct === false
+          ? 'flex-1 py-1 text-xs font-bold rounded-lg border border-rose-500 bg-rose-600 text-white transition'
+          : 'flex-1 py-1 text-xs font-bold rounded-lg border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition';
+      }
+    }
+
+    function setAchievementLevel(level) {
+      const gId = document.getElementById('debug-achieve-group').value;
+      if (!gId) { alert('班を選択してください'); return; }
+      if (!debugAchievementData[gId]) onDebugAchieveGroupChange();
+
+      debugAchievementData[gId].level = level;
+      const spots = [];
+      for (let i = 0; i < level; i++) spots.push('スポット' + (i + 1));
+      localStorage.setItem('qlink_cleared_' + gId, JSON.stringify(spots));
+      localStorage.setItem('qlink_debug_achievement_' + gId, JSON.stringify(debugAchievementData[gId]));
+      refreshDebugAchievementUI(gId);
+    }
+
+    function setQuestionAnswer(q, answer) {
+      const gId = document.getElementById('debug-achieve-group').value;
+      if (!gId) { alert('班を選択してください'); return; }
+      if (!debugAchievementData[gId]) onDebugAchieveGroupChange();
+
+      debugAchievementData[gId].answers[q - 1].selected = answer;
+      localStorage.setItem('qlink_q' + q + '_answer_' + gId, answer);
+      localStorage.setItem('qlink_debug_achievement_' + gId, JSON.stringify(debugAchievementData[gId]));
+      refreshDebugAchievementUI(gId);
+    }
+
+    function setQuestionResult(q, isCorrect) {
+      const gId = document.getElementById('debug-achieve-group').value;
+      if (!gId) { alert('班を選択してください'); return; }
+      if (!debugAchievementData[gId]) onDebugAchieveGroupChange();
+
+      debugAchievementData[gId].answers[q - 1].correct = isCorrect;
+      localStorage.setItem('qlink_q' + q + '_result_' + gId, isCorrect ? 'correct' : 'incorrect');
+      localStorage.setItem('qlink_debug_achievement_' + gId, JSON.stringify(debugAchievementData[gId]));
+      refreshDebugAchievementUI(gId);
+    }
+
+    async function sendDebugStudentMessage() {
+      const cls = document.getElementById('debug-chat-class').value;
+      const gId = document.getElementById('debug-chat-group').value;
+      const sender = document.getElementById('debug-chat-sender').value.trim() || '生徒';
+      const text = document.getElementById('debug-chat-text').value.trim();
+      const status = document.getElementById('debug-chat-status');
+
+      if (!cls || !gId) { status.textContent = '❌ クラスと班を選択してください'; return; }
+      if (!text) { status.textContent = '❌ メッセージを入力してください'; return; }
+
+      status.textContent = '送信中...';
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ school: 'school1', className: cls, group: gId, sender: sender, text: text })
+        });
+        if (res.ok) {
+          document.getElementById('debug-chat-text').value = '';
+          status.textContent = '✅ 送信完了';
+          // 教師チャット画面が同じ班を表示中なら自動リロード
+          const mainCls = document.getElementById('chatClassSelect') ? document.getElementById('chatClassSelect').value : '';
+          const mainGId = document.getElementById('chatGroupSelect') ? document.getElementById('chatGroupSelect').value : '';
+          if (mainCls === cls && mainGId === gId) loadTeacherChatSection();
+        } else {
+          status.textContent = '❌ 送信失敗 (HTTP ' + res.status + ')';
+        }
+      } catch (e) {
+        status.textContent = '❌ サーバー未接続';
+      }
+      setTimeout(() => { if (status) status.textContent = ''; }, 3000);
+    }
+
+    /* ===== 設定ドロップダウン ===== */
+    function toggleTechSettings() {
+      const menu = document.getElementById('tech-settings-menu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    function techSettingSelect(name) {
+      document.getElementById('tech-settings-menu').style.display = 'none';
+      if (name === '課題作成') {
+        window.location.href = 'kadaisakusei.html';
+      } else if (name === '集合場所・日時') {
+        showSection('gathering');
+      }
+    }
+    document.addEventListener('click', function(e) {
+      const wrapper = document.getElementById('tech-settings-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('tech-settings-menu').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
